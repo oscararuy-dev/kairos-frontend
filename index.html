@@ -966,8 +966,7 @@ function hideTip() { tooltip.style.display = 'none'; }
   // Domain headers
   domains.forEach((d, i) => {
     const x = labelW + i * cellW + cellW/2;
-    const lines = d.split('
-');
+    const lines = d.split(' ');
     const isWeak = [0,3,5].includes(i);
     svg += `<text x="${x}" y="${topH-28}" text-anchor="middle" font-size="13" font-weight="600" fill="${isWeak ? '#F87171' : '#94A3B8'}">${lines[0]}</text>`;
     svg += `<text x="${x}" y="${topH-12}" text-anchor="middle" font-size="11" fill="${isWeak ? '#F87171' : '#64748B'}">${lines[1]}</text>`;
@@ -1009,7 +1008,7 @@ function hideTip() { tooltip.style.display = 'none'; }
       if (val > 0) {
         rect.style.cursor = 'pointer';
         rect.addEventListener('mouseenter', e => {
-          showTip(e, `<b>${areas[row]}</b><br>${domains[col].replace('\n',' ')}<br>${linkLabels[val]}`);
+          showTip(e, `<b>${areas[row]}</b><br>${domains[col].replace(' ',' ')}<br>${linkLabels[val]}`);
         });
         rect.addEventListener('mousemove', e => {
           tooltip.style.left = (e.clientX + 14) + 'px';
@@ -1027,12 +1026,7 @@ function hideTip() { tooltip.style.display = 'none'; }
   canvas.height = 300;
   document.getElementById('chart-dyslexia').appendChild(canvas);
 
-  const categories = ['Phonological
-Awareness','Phonological
-Memory','Rapid
-Naming','Orthographic
-Processing','Reading
-Fluency','Spelling'];
+  const categories = ['Phonological Awareness','Phonological Memory','Rapid Naming','Orthographic Processing','Reading Fluency','Spelling'];
   const scores = [74, 82, 71, 78, 68, 73];
   const thresholds = [85, 85, 85, 85, 85, 85];
 
@@ -1073,12 +1067,11 @@ Fluency','Spelling'];
               if (ctx.datasetIndex === 1) return null;
               const s = scores[ctx.dataIndex];
               const risk = s < 75 ? 'High risk' : s < 85 ? 'At risk' : 'Within limits';
-              return ` ${ctx.label.replace('
-',' ')}: SS ${s}  — ${risk}`;
+              return ` ${ctx.label}: SS ${s}  — ${risk}`;
             }
           }
         }
-      },
+          },
       scales: {
         r: {
           min: 40, max: 120,
