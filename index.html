@@ -1004,7 +1004,28 @@ N/A'];
   });
 
   svg += '</svg>';
-  document.getElementById('chart-concordance').innerHTML = svg;
+  const div = document.getElementById('chart-concordance');
+  div.innerHTML = svg;
+  // Add hover tooltips to concordance cells
+  const linkLabels = ['No meaningful link', 'Partial link — contributing factor', 'Strong link — primary predictor'];
+  div.querySelectorAll('rect[fill]').forEach((rect, i) => {
+    const row = Math.floor(i / 7);
+    const col = i % 7;
+    if (row < areas.length && col < domains.length) {
+      const val = data[row][col];
+      if (val > 0) {
+        rect.style.cursor = 'pointer';
+        rect.addEventListener('mouseenter', e => {
+          showTip(e, `<b>${areas[row]}</b><br>${domains[col].replace('\n',' ')}<br>${linkLabels[val]}`);
+        });
+        rect.addEventListener('mousemove', e => {
+          tooltip.style.left = (e.clientX + 14) + 'px';
+          tooltip.style.top = (e.clientY - 10) + 'px';
+        });
+        rect.addEventListener('mouseleave', hideTip);
+      }
+    }
+  });
 })();
 
 // ── Chart 5: Dyslexia Profile ──
