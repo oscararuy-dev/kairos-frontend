@@ -622,6 +622,470 @@ body::before {
   </div>
 </div>
 
+
+<!-- Gallery -->
+<section class="section" id="gallery">
+  <div class="reveal">
+    <div class="section-label">Output Gallery</div>
+    <h2 class="section-title">See what Kairos produces</h2>
+    <p class="section-sub">Every chart is generated live from your data. Hover over elements to explore. Student name and data below are fictional.</p>
+  </div>
+
+  <!-- Chart 1: CHC Domain Profile -->
+  <div class="gallery-card reveal" style="margin-top:56px;">
+    <div class="gallery-label">01 — CHC Cognitive Domain Profile</div>
+    <div class="gallery-desc">Color-coded by PSW classification. Dashed lines show student mean and population mean.</div>
+    <div class="gallery-chart" id="chart-chc"></div>
+  </div>
+
+  <!-- Chart 2: Academic Achievement -->
+  <div class="gallery-card reveal">
+    <div class="gallery-label">02 — Academic Achievement Profile</div>
+    <div class="gallery-desc">All WJ-IV achievement and oral language composites in one view.</div>
+    <div class="gallery-chart" id="chart-ach"></div>
+  </div>
+
+  <!-- Chart 3: PSW Infographic -->
+  <div class="gallery-card reveal">
+    <div class="gallery-label">03 — PSW Summary Infographic</div>
+    <div class="gallery-desc">The single graphic that captures the whole pattern — strengths, weaknesses, academic deficits, and concordance.</div>
+    <div class="gallery-chart" id="chart-psw"></div>
+  </div>
+
+  <!-- Chart 4: Concordance Heatmap -->
+  <div class="gallery-card reveal">
+    <div class="gallery-label">04 — Academic-Cognitive Concordance Matrix</div>
+    <div class="gallery-desc">Does each cognitive weakness logically explain each academic deficit? Hover cells for details.</div>
+    <div class="gallery-chart" id="chart-concordance"></div>
+  </div>
+
+  <!-- Chart 5: Dyslexia Profile -->
+  <div class="gallery-card reveal">
+    <div class="gallery-label">05 — Dyslexia Risk Profile</div>
+    <div class="gallery-desc">IDA/DDH convergent evidence summary across phonological, orthographic, and rapid naming domains.</div>
+    <div class="gallery-chart" id="chart-dyslexia"></div>
+  </div>
+</section>
+
+<style>
+.gallery-card {
+  background: var(--navy-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 32px; margin-bottom: 28px;
+  overflow: hidden;
+}
+.gallery-label {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px;
+  color: var(--teal); text-transform: uppercase; margin-bottom: 8px;
+}
+.gallery-desc { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
+.gallery-chart { width: 100%; overflow-x: auto; }
+.gallery-chart canvas { max-width: 100%; }
+.tooltip-box {
+  position: fixed; background: var(--navy-3); border: 1px solid var(--border-2);
+  border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--text-1);
+  pointer-events: none; z-index: 9999; display: none;
+  font-family: 'DM Mono', monospace;
+}
+</style>
+
+<div class="tooltip-box" id="global-tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── Shared helpers ──
+const NAVY = '#112030', NAVY2 = '#182d42', NAVY3 = '#1E3A52';
+const TEAL = '#0E9E8A', AMBER = '#F59E0B', RED = '#EF4444', GREEN = '#22C55E';
+const TEXT1 = '#F0F4F8', TEXT2 = '#94A3B8', TEXT3 = '#64748B', BORDER = 'rgba(255,255,255,0.07)';
+
+Chart.defaults.color = TEXT2;
+Chart.defaults.borderColor = BORDER;
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const tooltip = document.getElementById('global-tooltip');
+function showTip(e, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top = (e.clientY - 10) + 'px';
+}
+function hideTip() { tooltip.style.display = 'none'; }
+
+// ── Chart 1: CHC Domain Profile ──
+(function() {
+  const domains = ['Gc','Gf','Gv','Ga','Gsm','Glr','Gs'];
+  const scores  = [71, 112, 94, 79, 87, 74, null];
+  const mean = 86;
+  const colors = scores.map(s => s === null ? 'rgba(100,116,139,0.3)' : s >= 90 ? GREEN : s >= 85 ? AMBER : RED);
+  const labels = scores.map(s => s === null ? 'N/A' : String(s));
+
+  const canvas = document.createElement('canvas');
+  canvas.height = 280;
+  document.getElementById('chart-chc').appendChild(canvas);
+
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: domains,
+      datasets: [{
+        data: scores.map(s => s || 0),
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const s = scores[ctx.dataIndex];
+              if (!s) return ' Not administered';
+              const diff = s - mean;
+              const status = s >= 90 ? 'Normative strength' : s >= 85 ? 'Within normal limits' : 'PSW cognitive weakness';
+              return [` SS = ${s}  (${diff > 0 ? '+' : ''}${diff} vs mean)`, ` ${status}`];
+            }
+          }
+        },
+        annotation: { annotations: {} }
+      },
+      scales: {
+        x: {
+          min: 40, max: 130,
+          grid: { color: BORDER },
+          ticks: { color: TEXT2, stepSize: 10 }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: TEXT1, font: { family: "'DM Mono', monospace", size: 13 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'meanLines',
+      afterDraw(chart) {
+        const ctx2 = chart.ctx;
+        const area = chart.chartArea;
+        const xScale = chart.scales.x;
+        // student mean
+        const xMean = xScale.getPixelForValue(mean);
+        ctx2.save();
+        ctx2.strokeStyle = 'rgba(148,163,184,0.5)';
+        ctx2.setLineDash([4,4]);
+        ctx2.lineWidth = 1;
+        ctx2.beginPath(); ctx2.moveTo(xMean, area.top); ctx2.lineTo(xMean, area.bottom); ctx2.stroke();
+        // pop mean
+        const xPop = xScale.getPixelForValue(100);
+        ctx2.strokeStyle = 'rgba(14,158,138,0.3)';
+        ctx2.beginPath(); ctx2.moveTo(xPop, area.top); ctx2.lineTo(xPop, area.bottom); ctx2.stroke();
+        ctx2.restore();
+      }
+    }]
+  });
+})();
+
+// ── Chart 2: Academic Achievement ──
+(function() {
+  const areas = ['Broad Reading','Basic Reading Skills','Reading Comp.','Reading Fluency','Broad Math','Math Calc.','Math Problem Solving','Broad Written Lang.','Written Expression','Academic Fluency','Spelling','Broad Oral Language'];
+  const scores = [72, 82, 81, 68, 86, 84, 98, 82, 88, 71, 73, 69];
+  const colors = scores.map(s => s >= 90 ? GREEN : s >= 85 ? AMBER : RED);
+
+  const canvas = document.createElement('canvas');
+  canvas.height = 380;
+  document.getElementById('chart-ach').appendChild(canvas);
+
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: areas,
+      datasets: [{
+        data: scores,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const s = scores[ctx.dataIndex];
+              const pr = Math.round(Math.max(1, Math.min(99, 50 + (s-100)/15*50)));
+              const cat = s >= 90 ? 'Average / Above' : s >= 85 ? 'Low Average' : 'Below Average';
+              return [` SS = ${s}  ·  PR ≈ ${pr}`, ` ${cat}`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 40, max: 120,
+          grid: { color: BORDER },
+          ticks: { color: TEXT2, stepSize: 10 }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: TEXT1, font: { size: 12 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'refLines',
+      afterDraw(chart) {
+        const ctx2 = chart.ctx, area = chart.chartArea, xScale = chart.scales.x;
+        [85, 90].forEach((val, i) => {
+          const x = xScale.getPixelForValue(val);
+          ctx2.save();
+          ctx2.strokeStyle = i === 0 ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.3)';
+          ctx2.setLineDash([4,4]); ctx2.lineWidth = 1;
+          ctx2.beginPath(); ctx2.moveTo(x, area.top); ctx2.lineTo(x, area.bottom); ctx2.stroke();
+          ctx2.restore();
+        });
+      }
+    }]
+  });
+})();
+
+// ── Chart 3: PSW Infographic (SVG) ──
+(function() {
+  const svg = `<svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;font-family:'DM Sans',sans-serif;">
+    <style>
+      .col-hdr { font-size:13px; fill:#94A3B8; }
+      .box-lbl { font-size:14px; font-weight:600; }
+      .box-sub { font-size:11px; }
+      .conc { font-size:12px; fill:#94A3B8; }
+      .footer-txt { font-size:11px; fill:#64748B; }
+    </style>
+    <!-- Column headers -->
+    <text x="90" y="30" text-anchor="middle" class="col-hdr">Strengths</text>
+    <text x="310" y="30" text-anchor="middle" class="col-hdr">Weaknesses</text>
+    <text x="580" y="30" text-anchor="middle" class="col-hdr">Academic deficits</text>
+    <text x="810" y="30" text-anchor="middle" class="col-hdr">Concordance</text>
+    <!-- Strength: Gf -->
+    <rect x="30" y="48" width="120" height="52" rx="8" fill="#166534"/>
+    <text x="90" y="70" text-anchor="middle" class="box-lbl" fill="#86EFAC">Gf</text>
+    <text x="90" y="88" text-anchor="middle" class="box-sub" fill="#4ADE80">SS = 112</text>
+    <!-- Mean box -->
+    <rect x="30" y="118" width="120" height="28" rx="5" fill="none" stroke="rgba(148,163,184,0.3)" stroke-dasharray="4,3"/>
+    <text x="90" y="136" text-anchor="middle" style="font-size:11px;fill:#94A3B8;">mean = 86</text>
+    <!-- Weaknesses -->
+    <rect x="250" y="48" width="120" height="52" rx="8" fill="#7F1D1D"/>
+    <text x="310" y="70" text-anchor="middle" class="box-lbl" fill="#FCA5A5">Gc</text>
+    <text x="310" y="88" text-anchor="middle" class="box-sub" fill="#F87171">SS = 71</text>
+    <rect x="250" y="118" width="120" height="52" rx="8" fill="#7F1D1D"/>
+    <text x="310" y="140" text-anchor="middle" class="box-lbl" fill="#FCA5A5">Ga</text>
+    <text x="310" y="158" text-anchor="middle" class="box-sub" fill="#F87171">SS = 79</text>
+    <rect x="250" y="188" width="120" height="52" rx="8" fill="#7F1D1D"/>
+    <text x="310" y="210" text-anchor="middle" class="box-lbl" fill="#FCA5A5">Glr/RAN</text>
+    <text x="310" y="228" text-anchor="middle" class="box-sub" fill="#F87171">SS = 74</text>
+    <rect x="250" y="258" width="120" height="52" rx="8" fill="#78350F"/>
+    <text x="310" y="280" text-anchor="middle" class="box-lbl" fill="#FCD34D">Gsm</text>
+    <text x="310" y="298" text-anchor="middle" class="box-sub" fill="#FDE68A">SS = 87</text>
+    <!-- Academic deficits -->
+    <rect x="510" y="48" width="140" height="48" rx="8" fill="#7C2D12"/>
+    <text x="580" y="68" text-anchor="middle" class="box-lbl" fill="#FDBA74">Broad Reading</text>
+    <text x="580" y="86" text-anchor="middle" class="box-sub" fill="#FB923C">SS = 72</text>
+    <rect x="510" y="108" width="140" height="48" rx="8" fill="#7C2D12"/>
+    <text x="580" y="128" text-anchor="middle" class="box-lbl" fill="#FDBA74">Reading Fluency</text>
+    <text x="580" y="146" text-anchor="middle" class="box-sub" fill="#FB923C">SS = 68</text>
+    <rect x="510" y="168" width="140" height="48" rx="8" fill="#7C2D12"/>
+    <text x="580" y="188" text-anchor="middle" class="box-lbl" fill="#FDBA74">Reading Comp.</text>
+    <text x="580" y="206" text-anchor="middle" class="box-sub" fill="#FB923C">SS = 81</text>
+    <rect x="510" y="228" width="140" height="48" rx="8" fill="#7C2D12"/>
+    <text x="580" y="248" text-anchor="middle" class="box-lbl" fill="#FDBA74">Spelling</text>
+    <text x="580" y="266" text-anchor="middle" class="box-sub" fill="#FB923C">SS = 73</text>
+    <rect x="510" y="288" width="140" height="48" rx="8" fill="#7C2D12"/>
+    <text x="580" y="308" text-anchor="middle" class="box-lbl" fill="#FDBA74">Oral Language</text>
+    <text x="580" y="326" text-anchor="middle" class="box-sub" fill="#FB923C">SS = 69</text>
+    <rect x="510" y="348" width="140" height="48" rx="8" fill="#14532D"/>
+    <text x="580" y="368" text-anchor="middle" class="box-lbl" fill="#86EFAC">Math Problem Solving</text>
+    <text x="580" y="386" text-anchor="middle" class="box-sub" fill="#4ADE80">SS = 98 ✓</text>
+    <!-- Arrows Gc -> reading -->
+    <line x1="370" y1="74" x2="510" y2="72" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="370" y1="74" x2="510" y2="132" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="370" y1="74" x2="510" y2="192" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- Ga -> spelling/fluency -->
+    <line x1="370" y1="144" x2="510" y2="132" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="370" y1="144" x2="510" y2="252" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- Glr -> fluency/spelling -->
+    <line x1="370" y1="214" x2="510" y2="132" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="370" y1="214" x2="510" y2="252" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- Gc -> oral -->
+    <line x1="370" y1="74" x2="510" y2="312" stroke="#4ADE80" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- Concordance labels -->
+    <text x="680" y="76" class="conc">Very strong</text>
+    <text x="680" y="136" class="conc">Very strong</text>
+    <text x="680" y="196" class="conc">Strong</text>
+    <text x="680" y="256" class="conc">Strong</text>
+    <text x="680" y="316" class="conc">Strong</text>
+    <text x="680" y="376" class="conc">Gf intact ✓</text>
+    <!-- Footer -->
+    <text x="450" y="410" text-anchor="middle" class="footer-txt">PSW pattern supported · Gf strength anchors eligibility · Gs gap requires follow-up</text>
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+  </svg>`;
+  document.getElementById('chart-psw').innerHTML = svg;
+})();
+
+// ── Chart 4: Concordance Heatmap ──
+(function() {
+  const domains = ['Gc
+SS=71','Gf
+SS=112','Gv
+SS=94','Ga
+SS=79','Gsm
+SS=87','Glr
+SS=74','Gs
+N/A'];
+  const areas = ['Broad Reading','Basic Reading Skills','Reading Comp.','Reading Fluency','Broad Math','Math Calc.','Broad Written Lang.','Academic Fluency','Spelling','Broad Oral Language'];
+  // 0=none, 1=partial, 2=strong
+  const data = [
+    [2,0,0,2,1,1,1], // Broad Reading
+    [1,0,0,2,0,1,0], // Basic Reading
+    [2,0,0,0,1,0,0], // Reading Comp
+    [0,0,0,2,0,2,2], // Reading Fluency
+    [0,1,0,0,1,0,1], // Broad Math
+    [0,0,0,0,1,0,1], // Math Calc
+    [0,0,1,1,1,0,1], // Written Lang
+    [0,0,0,0,0,1,2], // Academic Fluency
+    [1,0,0,2,0,0,0], // Spelling
+    [2,0,0,0,1,0,0], // Broad Oral
+  ];
+
+  const cellW = 62, cellH = 36, labelW = 140, topH = 56;
+  const W = labelW + domains.length * cellW + 20;
+  const H = topH + areas.length * cellH + 60;
+
+  const colors = ['rgba(255,255,255,0.05)', '#854D0E', '#14532D'];
+  const labels = ['', 'Partial', 'Strong'];
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;font-family:'DM Sans',sans-serif;">`;
+
+  // Domain headers
+  domains.forEach((d, i) => {
+    const x = labelW + i * cellW + cellW/2;
+    const lines = d.split('
+');
+    const isWeak = [0,3,5].includes(i);
+    svg += `<text x="${x}" y="${topH-28}" text-anchor="middle" font-size="13" font-weight="600" fill="${isWeak ? '#F87171' : '#94A3B8'}">${lines[0]}</text>`;
+    svg += `<text x="${x}" y="${topH-12}" text-anchor="middle" font-size="11" fill="${isWeak ? '#F87171' : '#64748B'}">${lines[1]}</text>`;
+  });
+
+  // Rows
+  areas.forEach((area, r) => {
+    const y = topH + r * cellH;
+    svg += `<text x="${labelW-8}" y="${y + cellH/2 + 4}" text-anchor="end" font-size="12" fill="#94A3B8">${area}</text>`;
+    domains.forEach((_, c) => {
+      const val = data[r][c];
+      const x = labelW + c * cellW;
+      svg += `<rect x="${x+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="4" fill="${colors[val]}" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>`;
+      if (val > 0) {
+        const dot = val === 2 ? '●●' : '●';
+        svg += `<text x="${x+cellW/2}" y="${y+cellH/2+4}" text-anchor="middle" font-size="11" fill="${val===2?'#86EFAC':'#FCD34D'}">${dot}</text>`;
+      }
+    });
+  });
+
+  // Legend
+  const ly = H - 30;
+  [[0,'No link','rgba(255,255,255,0.05)'],[1,'Partial','#854D0E'],[2,'Strong','#14532D']].forEach(([_,lbl,col], i) => {
+    const x = labelW + i * 160;
+    svg += `<rect x="${x}" y="${ly}" width="16" height="16" rx="3" fill="${col}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+    svg += `<text x="${x+22}" y="${ly+12}" font-size="11" fill="#64748B">${lbl}</text>`;
+  });
+
+  svg += '</svg>';
+  document.getElementById('chart-concordance').innerHTML = svg;
+})();
+
+// ── Chart 5: Dyslexia Profile ──
+(function() {
+  const canvas = document.createElement('canvas');
+  canvas.height = 300;
+  document.getElementById('chart-dyslexia').appendChild(canvas);
+
+  const categories = ['Phonological
+Awareness','Phonological
+Memory','Rapid
+Naming','Orthographic
+Processing','Reading
+Fluency','Spelling'];
+  const scores = [74, 82, 71, 78, 68, 73];
+  const thresholds = [85, 85, 85, 85, 85, 85];
+
+  new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels: categories,
+      datasets: [
+        {
+          label: 'Alex Rivera (SS)',
+          data: scores,
+          backgroundColor: 'rgba(239,68,68,0.15)',
+          borderColor: '#EF4444',
+          borderWidth: 2,
+          pointBackgroundColor: '#EF4444',
+          pointRadius: 5,
+        },
+        {
+          label: 'PSW Threshold (SS 85)',
+          data: thresholds,
+          backgroundColor: 'rgba(14,158,138,0.05)',
+          borderColor: 'rgba(14,158,138,0.4)',
+          borderWidth: 1.5,
+          borderDash: [4,4],
+          pointRadius: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: TEXT2, font: { size: 12 }, boxWidth: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 1) return null;
+              const s = scores[ctx.dataIndex];
+              const risk = s < 75 ? 'High risk' : s < 85 ? 'At risk' : 'Within limits';
+              return ` ${ctx.label.replace('
+',' ')}: SS ${s}  — ${risk}`;
+            }
+          }
+        }
+      },
+      scales: {
+        r: {
+          min: 40, max: 120,
+          ticks: { stepSize: 20, color: TEXT3, backdropColor: 'transparent' },
+          grid: { color: BORDER },
+          angleLines: { color: BORDER },
+          pointLabels: { color: TEXT2, font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  // Dyslexia verdict badge
+  const badge = document.createElement('div');
+  badge.style.cssText = 'margin-top:16px;padding:12px 18px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;font-size:13px;color:#FCA5A5;font-family:"DM Mono",monospace;';
+  badge.innerHTML = '⚠ IDA convergent evidence: phonological + orthographic + RAN deficits present across 6 domains · DDH criteria met · Recommend SLD: Reading eligibility review';
+  document.getElementById('chart-dyslexia').appendChild(badge);
+})();
+</script>
+
+
 <!-- Pricing -->
 <section class="section" id="pricing" style="text-align:center;">
   <div class="reveal">
