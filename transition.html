@@ -234,8 +234,8 @@ function playChime() {
 const params = new URLSearchParams(window.location.search);
 const dest = params.get('to') || 'Kairos_Extraction.html';
 
-// Play chime after logo appears
-setTimeout(playChime, 400);
+// Play chime immediately — user gesture came from the click on previous page
+playChime();
 
 // Redirect after animation completes
 setTimeout(() => {
