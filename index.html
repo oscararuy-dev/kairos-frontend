@@ -428,9 +428,9 @@ body::before {
   </a>
   <nav class="nav">
     <a href="#features">Features</a>
-    <a href="transition.html?to=Kairos_Extraction.html">How it works</a>
+    <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')">How it works</a>
     <a href="#pricing">Pricing</a>
-    <a href="transition.html?to=Kairos_Extraction.html" class="nav-cta">Launch App →</a>
+    <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')" class="nav-cta">Launch App →</a>
   </nav>
 </header>
 
@@ -448,7 +448,7 @@ body::before {
       Kairos automates the most time-consuming parts of psychoeducational evaluation — score extraction, PSW/XBA analysis, and pattern interpretation — so you can focus on the student.
     </p>
     <div class="hero-actions">
-      <a href="transition.html?to=Kairos_Extraction.html" class="btn-primary">
+      <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')" class="btn-primary">
         Start for free
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
@@ -641,7 +641,7 @@ body::before {
         <li><span class="pricing-check">✓</span> Dyslexia pattern detection</li>
         <li><span class="pricing-check">✓</span> Export figures + tables</li>
       </ul>
-      <a href="transition.html?to=Kairos_Extraction.html" class="btn-secondary" style="width:100%;justify-content:center;">Get started</a>
+      <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')" class="btn-secondary" style="width:100%;justify-content:center;">Get started</a>
     </div>
     <div class="pricing-card featured">
       <div class="pricing-label">ANNUAL</div>
@@ -654,7 +654,7 @@ body::before {
         <li><span class="pricing-check">✓</span> Early access to new features</li>
         <li><span class="pricing-check">✓</span> 3 free analyses to start</li>
       </ul>
-      <a href="transition.html?to=Kairos_Extraction.html" class="btn-primary" style="width:100%;justify-content:center;">Get started</a>
+      <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')" class="btn-primary" style="width:100%;justify-content:center;">Get started</a>
     </div>
   </div>
   <p class="reveal" style="margin-top:24px;font-size:13px;color:var(--text-3);">
@@ -672,7 +672,7 @@ body::before {
   </div>
   <p class="footer-text">Built by a school psychologist, for school psychologists.</p>
   <div class="footer-links">
-    <a href="transition.html?to=Kairos_Extraction.html">App</a>
+    <a href="Kairos_Extraction.html" onclick="event.preventDefault();playChimeAndGo('Kairos_Extraction.html')">App</a>
     <a href="#pricing">Pricing</a>
     <a href="mailto:oscara.ruy@gmail.com">Contact</a>
   </div>
@@ -691,5 +691,32 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
+
+<script>
+function playChimeAndGo(url) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      const start = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
+      osc.start(start);
+      osc.stop(start + 1.2);
+    });
+    setTimeout(() => { window.location.href = url; }, 600);
+  } catch(e) {
+    window.location.href = url;
+  }
+}
+</script>
+
 </body>
 </html>
