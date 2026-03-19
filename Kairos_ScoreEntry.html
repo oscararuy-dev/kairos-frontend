@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kairos — Score Entry</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:       #112030;
+  --navy-2:     #182d42;
+  --navy-3:     #1E3A52;
+  --slate:      #2C4A6B;
+  --teal:       #0E9E8A;
+  --teal-dim:   #0A7A69;
+  --teal-glow:  rgba(14,158,138,0.15);
+  --amber:      #F59E0B;
+  --amber-dim:  rgba(245,158,11,0.12);
+  --red:        #EF4444;
+  --red-dim:    rgba(239,68,68,0.12);
+  --green:      #22C55E;
+  --green-dim:  rgba(34,197,94,0.10);
+  --text-1:     #F0F4F8;
+  --text-2:     #94A3B8;
+  --text-3:     #64748B;
+  --border:     rgba(255,255,255,0.07);
+  --border-2:   rgba(255,255,255,0.12);
+  --input-bg:   rgba(255,255,255,0.04);
+  --input-focus:rgba(14,158,138,0.20);
+  --radius:     8px;
+  --radius-lg:  14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--navy);
+  color: var(--text-1);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Background texture ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(14,158,138,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(13,27,42,0.9) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 60px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(17,32,48,0.88);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--teal);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--navy);
+  letter-spacing: -0.5px;
+}
+
+.logo-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-1);
+  letter-spacing: 0.3px;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.version-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--teal);
+  background: var(--teal-glow);
+  border: 1px solid rgba(14,158,138,0.25);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.header-status {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ── Main layout ── */
+.main {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 60px);
+}
+
+/* ── Sidebar nav ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  background: rgba(17,32,48,0.42);
+  position: sticky;
+  top: 104px;
+  height: calc(100vh - 104px);
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  padding: 0 16px;
+  margin-bottom: 6px;
+}
+
+.sidebar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 0 8px;
+  margin-bottom: 4px;
+  margin-top: 20px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 400;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: var(--input-bg);
+  color: var(--text-1);
+}
+
+.nav-item.active {
+  background: var(--teal-glow);
+  border-color: rgba(14,158,138,0.25);
+  color: var(--teal);
+  font-weight: 500;
+}
+
+.nav-item .nav-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-item .nav-status {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex-shrink: 0;
+}
+
+.nav-item.complete .nav-status { background: var(--green); }
+.nav-item.active .nav-status   { background: var(--teal); }
+.nav-item.error .nav-status    { background: var(--red); }
+
+/* ── Content area ── */
+.content {
+  padding: 32px 40px;
+  max-width: 900px;
+}
+
+.section-header {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--navy-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--border-2);
+}
+
+.card-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Form grid ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.col-span-2  { grid-column: span 2; }
+.col-span-3  { grid-column: span 3; }
+.col-span-full { grid-column: 1 / -1; }
+
+/* ── Form fields ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.3px;
+}
+
+.field label span.req {
+  color: var(--teal);
+  margin-left: 2px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 9px 11px;
+  transition: all 0.15s;
+  outline: none;
+  width: 100%;
+}
+
+.field input::placeholder,
+.field select option:first-child {
+  color: var(--text-3);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+  background: var(--input-focus);
+  box-shadow: 0 0 0 3px rgba(14,158,138,0.10);
+}
+
+.field input.error {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+
+.field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* ── SS input special ── */
+.ss-input-group {
+  position: relative;
+}
+
+.ss-input-group input {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  padding: 10px;
+}
+
+.ss-badge {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.ss-badge.strength  { background: var(--green-dim);  color: var(--green); }
+.ss-badge.weakness  { background: var(--red-dim);    color: var(--red); }
+.ss-badge.wnl       { background: var(--amber-dim);  color: var(--amber); }
+.ss-badge.na        { background: transparent;       color: var(--text-3); }
+
+/* ── Domain rows ── */
+.domain-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 110px 100px 120px auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  background: var(--input-bg);
+  transition: all 0.15s;
+}
+
+.domain-row:hover {
+  border-color: var(--border-2);
+  background: rgba(255,255,255,0.03);
+}
+
+.domain-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--teal);
+  text-align: center;
+}
+
+.domain-name {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.3;
+}
+
+.domain-name strong {
+  display: block;
+  color: var(--text-1);
+  font-size: 12px;
+  margin-bottom: 1px;
+}
+
+.na-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.na-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+/* ── Subtest section ── */
+.subtest-section {
+  margin-top: 8px;
+  padding: 12px 14px 14px;
+  background: rgba(255,255,255,0.015);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.subtest-header {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 90px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.subtest-header span {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.subtest-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 90px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.subtest-row .subtest-name {
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.borrowed-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--amber);
+  background: var(--amber-dim);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ── Achievement table ── */
+.ach-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.ach-table thead th {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  text-align: left;
+  padding: 4px 10px;
+  font-weight: 400;
+}
+
+.ach-table thead th:nth-child(2),
+.ach-table thead th:nth-child(3) {
+  text-align: center;
+}
+
+.ach-row td {
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.ach-row td:first-child {
+  border-left: 1px solid var(--border);
+  border-radius: var(--radius) 0 0 var(--radius);
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.ach-row td:last-child {
+  border-right: 1px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.ach-row:hover td {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border-2);
+}
+
+.ach-domain-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text-3);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 8px;
+}
+
+.ach-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--text-1);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  padding: 4px 6px;
+  width: 70px;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.ach-input:focus {
+  border-color: var(--teal);
+  background: var(--input-focus);
+}
+
+.ach-input.has-value { color: var(--teal); }
+
+/* ── Progress indicator ── */
+.progress-bar {
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), #34D399);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Student mean live display ── */
+.live-stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--teal-glow);
+  border: 1px solid rgba(14,158,138,0.2);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.stat-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.stat-value.na { color: var(--text-3); font-size: 13px; }
+
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(14,158,138,0.2);
+}
+
+/* ── Run button ── */
+.run-section {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(0deg, var(--navy) 70%, transparent);
+  padding: 20px 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 28px;
+  background: var(--teal);
+  color: var(--navy);
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+}
+
+.btn-run:hover {
+  background: #0BB89F;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(14,158,138,0.3);
+}
+
+.btn-run:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-run:disabled {
+  background: var(--slate);
+  color: var(--text-3);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  padding: 12px 20px;
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-2);
+  color: var(--text-1);
+}
+
+.run-meta {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* ── Validation message ── */
+.validation-msg {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--red-dim);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: #FCA5A5;
+  margin-bottom: 16px;
+}
+
+.validation-msg.show { display: flex; }
+
+/* ── Output preview panel ── */
+.output-panel {
+  display: none;
+  position: fixed;
+  top: 60px;
+  right: 0;
+  width: 340px;
+  height: calc(100vh - 60px);
+  background: var(--navy-2);
+  border-left: 1px solid var(--border);
+  z-index: 50;
+  overflow-y: auto;
+  padding: 24px;
+  animation: slideIn 0.25s ease;
+}
+
+.output-panel.show { display: block; }
+
+@keyframes slideIn {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.output-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.output-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 20px;
+}
+
+.output-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.output-item:hover {
+  border-color: var(--teal);
+  background: var(--teal-glow);
+}
+
+.output-icon { font-size: 18px; }
+
+.output-info { flex: 1; }
+.output-name { font-size: 12px; font-weight: 500; color: var(--text-1); }
+.output-desc { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+
+.output-dl {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--teal);
+  background: var(--teal-glow);
+  padding: 3px 7px;
+  border-radius: 4px;
+}
+
+/* ── Tooltip ── */
+.tooltip-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-wrap .tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--navy-3);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  line-height: 1.4;
+  max-width: 220px;
+  white-space: normal;
+  text-align: center;
+}
+
+.tooltip-wrap:hover .tip { display: block; }
+
+/* ── Info icon ── */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-3);
+  font-size: 9px;
+  cursor: help;
+  font-style: normal;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--teal-dim); }
+
+/* ── Tab nav in content ── */
+.tab-nav {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  padding: 9px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover { color: var(--text-2); }
+.tab-btn.active {
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .content { padding: 20px; }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .domain-row { grid-template-columns: 55px 1fr 90px; }
+}
+
+/* ── App-level navigation bar ── */
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 32px;
+  height: 44px;
+  background: rgba(17,32,48,0.65);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+  overflow-x: auto;
+}
+
+.app-nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  text-decoration: none;
+  user-select: none;
+}
+.app-nav-arrow:hover:not(.disabled) {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--teal-glow);
+}
+.app-nav-arrow.disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.app-nav-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  justify-content: center;
+}
+
+.app-nav-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+.app-nav-step:hover:not(.current) {
+  color: var(--text-2);
+  background: var(--input-bg);
+}
+.app-nav-step.current {
+  color: var(--teal);
+  background: var(--teal-glow);
+  font-weight: 500;
+}
+.app-nav-step.done {
+  color: var(--text-2);
+}
+.app-nav-step .step-n {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.app-nav-step.current .step-n {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--navy);
+  font-weight: 700;
+}
+.app-nav-step.done .step-n {
+  background: rgba(34,197,94,0.15);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.app-nav-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.app-nav-kbd {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Auth Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--navy-2); border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg); padding: 36px; width: 100%; max-width: 420px;
+}
+.modal h2 { font-family: "Playfair Display", serif; font-size: 22px; margin-bottom: 6px; color: var(--text-1); }
+.modal p { color: var(--text-2); font-size: 13px; margin-bottom: 24px; }
+.modal input {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius);
+  border: 1px solid var(--border-2); background: var(--input-bg);
+  color: var(--text-1); font-size: 14px; margin-bottom: 12px;
+}
+.modal input:focus { outline: none; border-color: var(--teal); }
+.modal-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.modal-tab {
+  flex: 1; padding: 8px; border-radius: var(--radius); border: 1px solid var(--border-2);
+  background: transparent; color: var(--text-2); cursor: pointer; font-size: 13px;
+}
+.modal-tab.active { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 600; }
+.modal-error { color: var(--red); font-size: 12px; margin-bottom: 10px; display: none; }
+.trial-badge {
+  font-family: "DM Mono", monospace; font-size: 11px;
+  background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.3);
+  color: var(--amber); padding: 4px 10px; border-radius: 4px; cursor: pointer;
+}
+.trial-badge.subscribed { background: var(--green-dim); border-color: rgba(34,197,94,0.3); color: var(--green); }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark"><svg width="20" height="27" viewBox="0 0 70 80" fill="none"><path d="M 28 5 C 45 10 60 21 56 40 C 52 58 44 70 28 75" stroke="rgba(4,52,42,0.80)" stroke-width="9.5" stroke-linecap="round" fill="none"/><path d="M 28 5 C 46 10 61 22 57 40 C 53 58 44 71 28 75" stroke="#064034" stroke-width="7.0" stroke-linecap="round" fill="none"/><path d="M 28.5 7 C 44 12 57 24 53.5 40 C 50 56 42.5 69 28.5 73" stroke="rgba(10,100,80,0.55)" stroke-width="3.5" stroke-linecap="round" fill="none"/><ellipse cx="28" cy="5" rx="3.5" ry="2.2" fill="rgba(2,30,24,0.95)"/><ellipse cx="28" cy="75" rx="3.5" ry="2.2" fill="rgba(2,30,24,0.95)"/><ellipse cx="44" cy="20" rx="3.0" ry="1.6" transform="rotate(-42,44,20)" fill="rgba(2,30,24,0.60)"/><ellipse cx="56" cy="40" rx="2.8" ry="1.8" transform="rotate(8,56,40)" fill="rgba(2,30,24,0.55)"/><ellipse cx="46" cy="61" rx="2.8" ry="1.5" transform="rotate(32,46,61)" fill="rgba(2,30,24,0.58)"/><path d="M 28 5 Q 20 40 28 75" stroke="#F0F4F8" stroke-width="1.2" opacity="0.65" fill="none"/><path d="M 1 57 Q 22 40.5 43 22" stroke="#F0F4F8" stroke-width="2.8" stroke-linecap="round" fill="none"/><path d="M 43 22 L 38.5 28.5 L 40.5 25.5 L 44.5 30 L 47.5 26 Z" fill="#FFF0F3" opacity="0.95"/><path d="M 1 57 C -2 52 -5 47 -2 43 C 1 39 8 41 11 47 C 10 50 6 53 1 57 Z" fill="rgba(2,40,30,0.65)"/><path d="M 1 57 C 4 61 7 64 6 67 C 4 70 -1 67 -0.5 62 C 0 60 1 58 1 57 Z" fill="rgba(2,40,30,0.50)"/></svg></div>
+    <span class="logo-text">Kairos</span>
+  </div>
+  <div class="header-meta" style="display:flex;align-items:center;gap:12px;">
+    <span class="version-badge">v1.0 · AA PSW/XBA</span>
+    <span class="header-status" id="autosave-status">All changes saved locally</span>
+    <span id="trial-badge" class="trial-badge" onclick="openAuthModal()" style="display:none;"></span>
+    <button id="auth-btn" onclick="openAuthModal()" style="background:var(--teal);border:none;color:var(--navy);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Sign In</button>
+  </div>
+</header>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>Welcome to Kairos</h2>
+    <p>Sign in or create an account to get 3 free analyses.</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="modal-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div class="modal-error" id="auth-error"></div>
+    <input type="email" id="auth-email" placeholder="Email address" />
+    <input type="password" id="auth-password" placeholder="Password" />
+    <button onclick="submitAuth()" style="width:100%;padding:11px;background:var(--teal);border:none;border-radius:var(--radius);color:var(--navy);font-weight:600;font-size:14px;cursor:pointer;margin-top:4px;">Continue</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-3);">3 free analyses · No credit card required</p>
+  </div>
+</div>
+
+<!-- ── App-level navigation ── -->
+<nav class="app-nav" id="app-nav">
+  <a class="app-nav-arrow" id="nav-back" href="Kairos_Extraction.html" title="Back to Score Extraction (←)">←</a>
+  <div class="app-nav-steps">
+    <a class="app-nav-step done" href="Kairos_Extraction.html" title="Go to Score Extraction">
+      <span class="step-n">1</span> Score Extraction
+    </a>
+    <div class="app-nav-divider"></div>
+    <div class="app-nav-step current">
+      <span class="step-n">2</span> Score Entry
+    </div>
+    <div class="app-nav-divider"></div>
+    <a class="app-nav-step" href="#" onclick="goToAnalysis(event)" id="nav-to-analysis" title="Go to Review & Run">
+      <span class="step-n">3</span> Review &amp; Run
+    </a>
+    <div class="app-nav-divider"></div>
+    <a class="app-nav-step" href="#" onclick="alert('Analysis output coming after running.')" title="Outputs">
+      <span class="step-n">4</span> Outputs
+    </a>
+  </div>
+  <a class="app-nav-arrow" id="nav-fwd" href="#" onclick="goToAnalysis(event)" title="Continue to Review & Run (→)">→</a>
+  <span class="app-nav-kbd" title="Use arrow keys to navigate">← →</span>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Evaluation</div>
+    <div class="sidebar-section">
+      <div class="nav-item active" onclick="showSection('student')" id="nav-student">
+        <span class="nav-icon">👤</span> Student Info
+        <span class="nav-status"></span>
+      </div>
+      <div class="nav-item" onclick="showSection('cognitive')" id="nav-cognitive">
+        <span class="nav-icon">🧠</span> Cognitive Domains
+        <span class="nav-status"></span>
+      </div>
+      <div class="nav-item" onclick="showSection('subtests')" id="nav-subtests">
+        <span class="nav-icon">🔬</span> Subtest Detail
+        <span class="nav-status"></span>
+      </div>
+      <div class="nav-item" onclick="showSection('academic')" id="nav-academic">
+        <span class="nav-icon">📚</span> Academic Achievement
+        <span class="nav-status"></span>
+      </div>
+    </div>
+    <div class="sidebar-label">Analysis</div>
+    <div class="sidebar-section">
+      <div class="nav-item" onclick="showSection('review')" id="nav-review">
+        <span class="nav-icon">✓</span> Review &amp; Run
+        <span class="nav-status"></span>
+      </div>
+    </div>
+    <div class="sidebar-label">Reference</div>
+    <div class="sidebar-section">
+      <div class="nav-item" onclick="alert('Classification reference coming in v1.1')">
+        <span class="nav-icon">📖</span> Score Guide
+      </div>
+      <div class="nav-item" onclick="alert('Instrument reference coming in v1.1')">
+        <span class="nav-icon">🗂</span> Instruments
+      </div>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="content">
+
+    <!-- ── Section: Student Info ── -->
+    <section id="section-student">
+      <div class="section-header">
+        <div class="section-title">Student Information</div>
+        <div class="section-desc">Demographic and evaluation context. All fields used for report headers and output labeling.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Identifiers</div>
+        <div class="form-grid">
+          <div class="field col-span-2">
+            <label>Student Full Name <span class="req">*</span></label>
+            <input type="text" id="s-name" placeholder="Last, First" oninput="autosave(); updateNav()"/>
+          </div>
+          <div class="field">
+            <label>Date of Birth <span class="req">*</span></label>
+            <input type="date" id="s-dob" oninput="calcAge(); autosave()"/>
+          </div>
+          <div class="field">
+            <label>Calculated Age</label>
+            <input type="text" id="s-age" placeholder="Auto-calculated" readonly style="color:var(--teal);font-family:'DM Mono',monospace;font-size:13px"/>
+          </div>
+          <div class="field">
+            <label>Grade <span class="req">*</span></label>
+            <select id="s-grade" onchange="autosave()">
+              <option value="">Select…</option>
+              <option>K</option><option>1</option><option>2</option>
+              <option>3</option><option>4</option><option>5</option>
+              <option>6</option><option>7</option><option>8</option>
+              <option>9</option><option>10</option><option>11</option><option>12</option>
+            </select>
+          </div>
+          <div class="field col-span-2">
+            <label>School Name <span class="req">*</span></label>
+            <input type="text" id="s-school" placeholder="School name" oninput="autosave()"/>
+          </div>
+          <div class="field">
+            <label>Teacher</label>
+            <input type="text" id="s-teacher" placeholder="Ms. / Mr. …" oninput="autosave()"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Evaluation Context</div>
+        <div class="form-grid">
+          <div class="field col-span-2">
+            <label>Examiner Name</label>
+            <input type="text" id="s-examiner" placeholder="School Psychologist" oninput="autosave()"/>
+          </div>
+          <div class="field">
+            <label>Eval Date / Year</label>
+            <input type="text" id="s-evaldate" placeholder="e.g. 2026" oninput="autosave()"/>
+          </div>
+          <div class="field">
+            <label>
+              Ethnicity / Background
+              <span class="tooltip-wrap">
+                <i class="info-icon">i</i>
+                <span class="tip">Used to select CDE-approved instrument battery for African American students per AB 1369 / CAADE guidance.</span>
+              </span>
+            </label>
+            <select id="s-ethnicity" onchange="autosave(); updateBattery()">
+              <option value="">Select…</option>
+              <option value="AA">African American / Black</option>
+              <option value="H">Hispanic / Latino</option>
+              <option value="W">White / Caucasian</option>
+              <option value="A">Asian / Pacific Islander</option>
+              <option value="AI">American Indian / Alaska Native</option>
+              <option value="MR">Multiracial</option>
+              <option value="O">Other / Decline to State</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Evaluation Model</label>
+            <input type="text" id="s-model" value="PSW / Cross-Battery (Flanagan-Ortiz-Alfonso DD/C)" readonly style="font-size:11px;color:var(--text-2)"/>
+          </div>
+          <div class="field col-span-2">
+            <label>Reason for Referral</label>
+            <textarea id="s-referral" rows="2" placeholder="Brief referral reason for report context…" oninput="autosave()" style="resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="aa-notice" style="display:none" class="card" style="border-color:rgba(14,158,138,0.3)">
+        <div class="card-title">CDE Alternative Assessment Battery Active</div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.6">
+          African American student identified. Instrument battery defaults to CDE-approved alternatives per AB 1369 / CAADE guidance:
+          <br/><br/>
+          <strong style="color:var(--teal)">Gc:</strong> TAPS-4 LCI &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Gf:</strong> WJ-IV Number Matrices &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Gv:</strong> TVPS-4 &amp; Beery VMI &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Ga:</strong> CTOPP-2 PA Composite &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Gsm:</strong> TAPS-4 Auditory Memory &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Glr:</strong> CTOPP-2 Rapid Symbolic Naming &nbsp;·&nbsp;
+          <strong style="color:var(--teal)">Gs:</strong> Color Trails Test
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn-run" onclick="showSection('cognitive')" style="padding:10px 22px;font-size:13px">
+          Continue → Cognitive Domains
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Section: Cognitive Domains ── -->
+    <section id="section-cognitive" style="display:none">
+      <div class="section-header">
+        <div class="section-title">Cognitive Domain Scores</div>
+        <div class="section-desc">Enter composite SS for each CHC domain. Use the SS equivalent for all scores — ScS → SS conversion: (ScS − 10) × 5 + 100.</div>
+      </div>
+
+      <div id="live-stats" class="live-stats">
+        <div class="stat-item">
+          <span class="stat-label">Student Mean</span>
+          <span class="stat-value na" id="stat-mean">—</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">Student SD</span>
+          <span class="stat-value na" id="stat-sd">—</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">Domains Entered</span>
+          <span class="stat-value" id="stat-n">0 / 7</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">PSW Weaknesses</span>
+          <span class="stat-value na" id="stat-weak">—</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">PSW Strengths</span>
+          <span class="stat-value na" id="stat-strong">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">CHC Domain Composites
+          <span class="tooltip-wrap" style="margin-left:4px">
+            <i class="info-icon">i</i>
+            <span class="tip">PSW classification requires: SS ≥ 90 AND ≥ student mean = Strength. SS &lt; 85 AND &lt; student mean = PSW Weakness. Thresholds per Flanagan-Ortiz-Alfonso DD/C model.</span>
+          </span>
+        </div>
+
+        <!-- Domain rows -->
+        <div id="domain-rows"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn-secondary" onclick="showSection('student')">← Back</button>
+        <button class="btn-run" onclick="showSection('subtests')" style="padding:10px 22px;font-size:13px">
+          Continue → Subtest Detail
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Section: Subtests ── -->
+    <section id="section-subtests" style="display:none">
+      <div class="section-header">
+        <div class="section-title">Subtest-Level Detail</div>
+        <div class="section-desc">Enter individual subtest scores for within-domain consistency analysis and figure generation. Borrowed subtests (from ACH battery) are marked separately.</div>
+      </div>
+      <div id="subtest-content"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn-secondary" onclick="showSection('cognitive')">← Back</button>
+        <button class="btn-run" onclick="showSection('academic')" style="padding:10px 22px;font-size:13px">
+          Continue → Academic Achievement
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Section: Academic Achievement ── -->
+    <section id="section-academic" style="display:none">
+      <div class="section-header">
+        <div class="section-title">Academic Achievement</div>
+        <div class="section-desc">WJ-IV Tests of Achievement & Oral Language cluster scores. Enter SS and PR for each administered cluster.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">WJ-IV Achievement Clusters</div>
+        <table class="ach-table">
+          <thead>
+            <tr>
+              <th>Cluster</th>
+              <th style="text-align:center">SS</th>
+              <th style="text-align:center">PR</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ach-rows"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn-secondary" onclick="showSection('subtests')">← Back</button>
+        <button class="btn-run" onclick="showSection('review')" style="padding:10px 22px;font-size:13px">
+          Continue → Review &amp; Run
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Section: Review & Run ── -->
+    <section id="section-review" style="display:none">
+      <div class="section-header">
+        <div class="section-title">Review &amp; Run Analysis</div>
+        <div class="section-desc">Confirm your data before generating the full Kairos output package.</div>
+      </div>
+
+      <div id="review-summary"></div>
+
+      <div class="validation-msg" id="val-msg">
+        <span>⚠</span>
+        <span id="val-text">Please complete required fields before running.</span>
+      </div>
+
+      <div class="card" style="border-color:rgba(14,158,138,0.2)">
+        <div class="card-title">Output Package</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--input-bg);border-radius:var(--radius);border:1px solid var(--border)">
+            <span style="font-size:20px">📊</span>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--text-1)">Analysis Excel</div>
+              <div style="font-size:10px;color:var(--text-3)">Domain profile, concordance, effect sizes, checklist</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--input-bg);border-radius:var(--radius);border:1px solid var(--border)">
+            <span style="font-size:20px">📈</span>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--text-1)">Figure Package (PDF)</div>
+              <div style="font-size:10px;color:var(--text-3)">6 print-ready figures + dyslexia profile</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--input-bg);border-radius:var(--radius);border:1px solid var(--border)">
+            <span style="font-size:20px">🖥</span>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--text-1)">Interactive Dashboard</div>
+              <div style="font-size:10px;color:var(--text-3)">Self-contained HTML for IEP meetings</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--input-bg);border-radius:var(--radius);border:1px solid var(--border)">
+            <span style="font-size:20px">📝</span>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--text-1)">Report Draft (AI)</div>
+              <div style="font-size:10px;color:var(--text-3)">Narrative sections — review &amp; edit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="run-section">
+        <button class="btn-run" id="run-btn" onclick="runAnalysis()">
+          <span>⚡</span> Run Full Analysis
+        </button>
+        <button class="btn-secondary" onclick="saveCase()">💾 Save Case</button>
+        <button class="btn-secondary" onclick="loadCase()">📂 Load Case</button>
+        <div class="run-meta">
+          Analysis runs locally in your browser.<br/>
+          No student data is transmitted to any server.
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div><!-- /main -->
+
+<!-- Output panel -->
+<div class="output-panel" id="output-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div>
+      <div class="output-title">Analysis Complete</div>
+      <div class="output-sub" id="output-student-name">—</div>
+    </div>
+    <button onclick="document.getElementById('output-panel').classList.remove('show')"
+            style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div id="output-items"></div>
+  <div style="margin-top:16px;padding:12px;background:var(--teal-glow);border:1px solid rgba(14,158,138,0.2);border-radius:var(--radius)">
+    <div style="font-size:11px;color:var(--teal);font-weight:600;margin-bottom:4px">PSW Pattern</div>
+    <div style="font-size:12px;color:var(--text-1)" id="psw-summary">—</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ── Domain definitions ─────────────────────────────────────────────────────
+const DOMAINS = [
+  { id: 'Gc',  label: 'Gc',  name: 'Comprehension-Knowledge', desc: 'Verbal knowledge, vocabulary, language',
+    instrument_aa: 'TAPS-4 LCI', instrument_std: 'WAIS-V Verbal Comp. Index',
+    subtests_aa: [
+      { name: 'Processing Oral Directions (TAPS-4)', type: 'ScS', borrowed: false },
+      { name: 'Auditory Comprehension (TAPS-4)',     type: 'ScS', borrowed: false },
+      { name: 'Oral Comprehension (WJ-IV)',          type: 'SS',  borrowed: true  },
+      { name: 'Picture Vocabulary (WJ-IV)',          type: 'SS',  borrowed: true  },
+    ]},
+  { id: 'Gf',  label: 'Gf',  name: 'Fluid Reasoning', desc: 'Inductive/deductive reasoning, novel problem-solving',
+    instrument_aa: 'WJ-IV Number Matrices', instrument_std: 'WISC-V Matrix Reasoning',
+    subtests_aa: [
+      { name: 'Number Matrices (WJ-IV)',   type: 'SS', borrowed: false },
+      { name: 'Applied Problems (WJ-IV)',  type: 'SS', borrowed: true, note: 'Corroborating only' },
+    ]},
+  { id: 'Gv',  label: 'Gv',  name: 'Visual-Spatial Processing', desc: 'Visual perception, spatial reasoning',
+    instrument_aa: 'TVPS-4 Overall SS', instrument_std: 'WISC-V Visual Spatial Index',
+    subtests_aa: [
+      { name: 'TVPS-4 Visual Discrimination',  type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Visual Memory',          type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Spatial Relationships',  type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Form Constancy',         type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Sequential Memory',      type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Figure-Ground',          type: 'ScS', borrowed: false },
+      { name: 'TVPS-4 Visual Closure',         type: 'ScS', borrowed: false },
+      { name: 'Beery VMI (Total)',              type: 'SS',  borrowed: false },
+    ]},
+  { id: 'Ga',  label: 'Ga',  name: 'Auditory Processing', desc: 'Phonological awareness, sound discrimination',
+    instrument_aa: 'CTOPP-2 Phonological Awareness', instrument_std: 'CTOPP-2 Phonological Awareness',
+    subtests_aa: [
+      { name: 'Elision (CTOPP-2)',           type: 'ScS', borrowed: false },
+      { name: 'Blending Words (CTOPP-2)',    type: 'ScS', borrowed: false },
+      { name: 'Phoneme Isolation (CTOPP-2)', type: 'ScS', borrowed: false },
+      { name: 'Segmentation (WJ-IV)',        type: 'SS',  borrowed: true  },
+      { name: 'Sound Blending (WJ-IV)',      type: 'SS',  borrowed: true  },
+    ]},
+  { id: 'Gsm', label: 'Gsm', name: 'Short-Term/Working Memory', desc: 'Phonological memory, working memory capacity',
+    instrument_aa: 'TAPS-4 Auditory Memory', instrument_std: 'WISC-V Working Memory Index',
+    subtests_aa: [
+      { name: 'Number Memory Forward (TAPS-4)', type: 'ScS', borrowed: false },
+      { name: 'Word Memory (TAPS-4)',           type: 'ScS', borrowed: false },
+      { name: 'Sentence Memory (TAPS-4)',       type: 'ScS', borrowed: false },
+    ]},
+  { id: 'Glr', label: 'Glr', name: 'Long-Term Retrieval / RAN', desc: 'Rapid naming, retrieval fluency',
+    instrument_aa: 'CTOPP-2 Rapid Symbolic Naming', instrument_std: 'CTOPP-2 Rapid Symbolic Naming',
+    subtests_aa: [
+      { name: 'Rapid Digit Naming (CTOPP-2)',  type: 'ScS', borrowed: false },
+      { name: 'Rapid Letter Naming (CTOPP-2)', type: 'ScS', borrowed: false },
+      { name: 'Rapid Picture Naming (WJ-IV)',  type: 'SS',  borrowed: true  },
+      { name: 'Retrieval Fluency (WJ-IV)',     type: 'SS',  borrowed: true  },
+    ]},
+  { id: 'Gs',  label: 'Gs',  name: 'Processing Speed', desc: 'Mental quickness, clerical speed',
+    instrument_aa: 'Color Trails Test', instrument_std: 'WISC-V Processing Speed Index',
+    subtests_aa: [] },
+];
+
+const ACADEMIC = [
+  { id: 'broad_reading',     label: 'Broad Reading',           domain: 'Grw' },
+  { id: 'basic_reading',     label: 'Basic Reading Skills',    domain: 'Grw' },
+  { id: 'reading_comp',      label: 'Reading Comprehension',   domain: 'Grw' },
+  { id: 'reading_fluency',   label: 'Reading Fluency',         domain: 'Grw' },
+  { id: 'broad_math',        label: 'Broad Mathematics',       domain: 'Gq'  },
+  { id: 'math_calc',         label: 'Math Calculation Skills', domain: 'Gq'  },
+  { id: 'math_problem',      label: 'Math Problem Solving',    domain: 'Gq'  },
+  { id: 'broad_written',     label: 'Broad Written Language',  domain: 'Grw' },
+  { id: 'written_expr',      label: 'Written Expression',      domain: 'Grw' },
+  { id: 'broad_achievement', label: 'Broad Achievement',       domain: 'Broad'},
+  { id: 'acad_fluency',      label: 'Academic Fluency',        domain: 'Gs'  },
+  { id: 'spelling',          label: 'Spelling',                domain: 'Grw' },
+  { id: 'oral_language',     label: 'Broad Oral Language',     domain: 'Gc'  },
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let isAA = false;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function init() {
+  renderDomainRows();
+  renderSubtests();
+  renderAchievementRows();
+  loadFromStorage();
+}
+
+// ── Section navigation ─────────────────────────────────────────────────────
+function showSection(name) {
+  document.querySelectorAll('section[id^="section-"]').forEach(s => s.style.display = 'none');
+  document.getElementById('section-' + name).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + name);
+  if (navEl) navEl.classList.add('active');
+  if (name === 'review') buildReviewSummary();
+  window.scrollTo(0, 0);
+}
+
+// ── Instrument battery based on ethnicity ──────────────────────────────────
+function updateBattery() {
+  const eth = document.getElementById('s-ethnicity').value;
+  isAA = (eth === 'AA');
+  document.getElementById('aa-notice').style.display = isAA ? 'block' : 'none';
+  renderDomainRows();
+  renderSubtests();
+}
+
+// ── Domain rows ────────────────────────────────────────────────────────────
+function renderDomainRows() {
+  const container = document.getElementById('domain-rows');
+  container.innerHTML = DOMAINS.map(d => {
+    const instrument = isAA ? d.instrument_aa : d.instrument_std;
+    return `
+    <div class="domain-row" id="dr-${d.id}">
+      <div class="domain-tag">${d.label}</div>
+      <div class="domain-name">
+        <strong>${d.name}</strong>
+        ${instrument}
+      </div>
+      <div class="ss-input-group">
+        <input
+          type="number" min="40" max="160"
+          id="ss-${d.id}"
+          placeholder="SS"
+          oninput="onSSChange('${d.id}')"
+          style="padding-right:36px"
+        />
+        <span class="ss-badge na" id="badge-${d.id}">—</span>
+      </div>
+      <div class="field" style="gap:3px">
+        <input type="date" id="date-${d.id}" oninput="autosave()"
+               style="font-size:11px;padding:8px 8px"/>
+      </div>
+      <label class="na-toggle">
+        <input type="checkbox" id="na-${d.id}" onchange="toggleNA('${d.id}')"/>
+        Not administered
+      </label>
+    </div>`;
+  }).join('');
+}
+
+function onSSChange(domainId) {
+  const val = parseInt(document.getElementById('ss-' + domainId).value);
+  const badge = document.getElementById('badge-' + domainId);
+  if (isNaN(val)) {
+    badge.className = 'ss-badge na';
+    badge.textContent = '—';
+  } else if (val >= 90) {
+    badge.className = 'ss-badge strength';
+    badge.textContent = 'STR';
+  } else if (val < 85) {
+    badge.className = 'ss-badge weakness';
+    badge.textContent = 'WK';
+  } else {
+    badge.className = 'ss-badge wnl';
+    badge.textContent = 'WNL';
+  }
+  updateLiveStats();
+  autosave();
+}
+
+function toggleNA(domainId) {
+  const isNA = document.getElementById('na-' + domainId).checked;
+  const ssEl = document.getElementById('ss-' + domainId);
+  const dateEl = document.getElementById('date-' + domainId);
+  ssEl.disabled = isNA;
+  dateEl.disabled = isNA;
+  if (isNA) {
+    ssEl.value = '';
+    document.getElementById('badge-' + domainId).className = 'ss-badge na';
+    document.getElementById('badge-' + domainId).textContent = 'N/A';
+  }
+  updateLiveStats();
+  autosave();
+}
+
+// ── Live stats ─────────────────────────────────────────────────────────────
+function updateLiveStats() {
+  const ssVals = DOMAINS
+    .filter(d => !document.getElementById('na-' + d.id)?.checked)
+    .map(d => parseInt(document.getElementById('ss-' + d.id)?.value))
+    .filter(v => !isNaN(v));
+
+  const n = ssVals.length;
+  document.getElementById('stat-n').textContent = n + ' / 7';
+
+  if (n < 2) {
+    document.getElementById('stat-mean').className = 'stat-value na';
+    document.getElementById('stat-mean').textContent = '—';
+    document.getElementById('stat-sd').className = 'stat-value na';
+    document.getElementById('stat-sd').textContent = '—';
+    document.getElementById('stat-weak').className = 'stat-value na';
+    document.getElementById('stat-weak').textContent = '—';
+    document.getElementById('stat-strong').className = 'stat-value na';
+    document.getElementById('stat-strong').textContent = '—';
+    return;
+  }
+
+  const mean = ssVals.reduce((a,b)=>a+b,0)/n;
+  const variance = ssVals.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(n-1);
+  const sd = Math.sqrt(variance);
+
+  document.getElementById('stat-mean').className = 'stat-value';
+  document.getElementById('stat-mean').textContent = mean.toFixed(1);
+  document.getElementById('stat-sd').className = 'stat-value';
+  document.getElementById('stat-sd').textContent = sd.toFixed(1);
+
+  const weaknesses = ssVals.filter(v => v < 85 && v < mean).length;
+  const strengths  = ssVals.filter(v => v >= 90 && v >= mean).length;
+
+  document.getElementById('stat-weak').className = 'stat-value' + (weaknesses > 0 ? '' : ' na');
+  document.getElementById('stat-weak').textContent = weaknesses;
+  document.getElementById('stat-strong').className = 'stat-value' + (strengths > 0 ? '' : ' na');
+  document.getElementById('stat-strong').textContent = strengths;
+}
+
+// ── Subtest rows ───────────────────────────────────────────────────────────
+function renderSubtests() {
+  const container = document.getElementById('subtest-content');
+  const activeSubtests = DOMAINS.filter(d => d.subtests_aa && d.subtests_aa.length > 0);
+
+  container.innerHTML = activeSubtests.map(d => `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">${d.label} — ${d.name}</div>
+      <div class="subtest-section">
+        <div class="subtest-header">
+          <span>Subtest</span>
+          <span>Score</span>
+          <span>Type</span>
+          <span>SS Equiv.</span>
+        </div>
+        ${d.subtests_aa.map((sub, i) => `
+        <div class="subtest-row">
+          <div class="subtest-name">
+            ${sub.name}
+            ${sub.borrowed ? '<span class="borrowed-tag">BORROWED</span>' : ''}
+            ${sub.note ? `<span style="font-size:9px;color:var(--text-3);display:block;margin-top:1px">${sub.note}</span>` : ''}
+          </div>
+          <input type="number" min="1" max="19"
+                 id="sub-${d.id}-${i}"
+                 placeholder="${sub.type === 'ScS' ? '1–19' : 'SS'}"
+                 oninput="calcSSEquiv('${d.id}', ${i}, '${sub.type}')"
+                 style="background:var(--input-bg);border:1px solid var(--border);
+                        border-radius:5px;color:var(--text-1);font-family:'DM Mono',monospace;
+                        font-size:13px;text-align:center;padding:5px;width:100%;outline:none"/>
+          <span style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;text-align:center">
+            ${sub.type}
+          </span>
+          <input type="text" readonly
+                 id="ss-equiv-${d.id}-${i}"
+                 placeholder="—"
+                 style="background:transparent;border:1px solid transparent;
+                        border-radius:5px;color:var(--teal);font-family:'DM Mono',monospace;
+                        font-size:13px;font-weight:500;text-align:center;padding:5px;
+                        width:100%;outline:none"/>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function calcSSEquiv(domainId, index, type) {
+  const raw = parseInt(document.getElementById(`sub-${domainId}-${index}`).value);
+  const equiv = document.getElementById(`ss-equiv-${domainId}-${index}`);
+  if (isNaN(raw)) { equiv.value = '—'; return; }
+  if (type === 'ScS') {
+    const ss = (raw - 10) * 5 + 100;
+    equiv.value = (ss >= 40 && ss <= 160) ? ss : '?';
+  } else {
+    equiv.value = raw;
+  }
+  autosave();
+}
+
+// ── Achievement rows ───────────────────────────────────────────────────────
+function renderAchievementRows() {
+  const tbody = document.getElementById('ach-rows');
+  tbody.innerHTML = ACADEMIC.map(a => `
+    <tr class="ach-row">
+      <td>
+        ${a.label}
+        <span class="ach-domain-tag">${a.domain}</span>
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="40" max="160"
+               class="ach-input" id="ach-ss-${a.id}"
+               placeholder="—"
+               oninput="onAchChange('${a.id}')"/>
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="1" max="99"
+               class="ach-input" id="ach-pr-${a.id}"
+               placeholder="—"
+               oninput="autosave()" style="width:58px"/>
+      </td>
+      <td style="text-align:center">
+        <span id="ach-status-${a.id}" style="font-size:11px;color:var(--text-3)">—</span>
+      </td>
+    </tr>`).join('');
+}
+
+function onAchChange(id) {
+  const ss = parseInt(document.getElementById('ach-ss-' + id).value);
+  const statusEl = document.getElementById('ach-status-' + id);
+  const inputEl  = document.getElementById('ach-ss-' + id);
+  if (isNaN(ss)) {
+    statusEl.textContent = '—';
+    statusEl.style.color = 'var(--text-3)';
+    inputEl.classList.remove('has-value');
+  } else {
+    inputEl.classList.add('has-value');
+    if (ss < 70) {
+      statusEl.textContent = 'Exceptionally Low';
+      statusEl.style.color = 'var(--red)';
+    } else if (ss < 80) {
+      statusEl.textContent = 'Below Average';
+      statusEl.style.color = '#F97316';
+    } else if (ss < 85) {
+      statusEl.textContent = 'Low Average';
+      statusEl.style.color = 'var(--amber)';
+    } else if (ss < 90) {
+      statusEl.textContent = 'Low Average';
+      statusEl.style.color = 'var(--amber)';
+    } else if (ss < 110) {
+      statusEl.textContent = 'Average';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = 'Above Average+';
+      statusEl.style.color = 'var(--teal)';
+    }
+  }
+  autosave();
+}
+
+// ── Review summary ─────────────────────────────────────────────────────────
+function buildReviewSummary() {
+  const name   = document.getElementById('s-name').value || '[No name entered]';
+  const grade  = document.getElementById('s-grade').value || '—';
+  const school = document.getElementById('s-school').value || '—';
+  const age    = document.getElementById('s-age').value || '—';
+
+  const ssVals = DOMAINS
+    .filter(d => !document.getElementById('na-' + d.id)?.checked)
+    .map(d => ({ id: d.id, label: d.label, name: d.name,
+                 ss: parseInt(document.getElementById('ss-' + d.id)?.value) }))
+    .filter(d => !isNaN(d.ss));
+
+  const mean = ssVals.length >= 2
+    ? (ssVals.reduce((a,b)=>a+b.ss,0)/ssVals.length).toFixed(1) : '—';
+
+  const weaknesses = ssVals.filter(d => !isNaN(d.ss) && d.ss < 85 && d.ss < parseFloat(mean));
+  const strengths  = ssVals.filter(d => !isNaN(d.ss) && d.ss >= 90 && d.ss >= parseFloat(mean));
+
+  const achDeficits = ACADEMIC.filter(a => {
+    const ss = parseInt(document.getElementById('ach-ss-' + a.id)?.value);
+    return !isNaN(ss) && ss < 85;
+  });
+
+  document.getElementById('review-summary').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Student</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        ${[['Name', name], ['Grade', grade], ['Age', age], ['School', school]].map(([l,v]) => `
+        <div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:2px">${l}</div>
+          <div style="font-size:13px;color:var(--text-1);font-weight:500">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Cognitive Summary</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+        <div><div style="font-size:10px;color:var(--text-3)">Student Mean</div>
+             <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--teal)">${mean}</div></div>
+        <div><div style="font-size:10px;color:var(--text-3)">PSW Strengths</div>
+             <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--green)">${strengths.length}</div></div>
+        <div><div style="font-size:10px;color:var(--text-3)">PSW Weaknesses</div>
+             <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--red)">${weaknesses.length}</div></div>
+        <div><div style="font-size:10px;color:var(--text-3)">Acad. Deficits</div>
+             <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--red)">${achDeficits.length}</div></div>
+      </div>
+      ${weaknesses.length > 0 ? `
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:6px">
+        <span style="color:var(--red);font-weight:600">PSW Weaknesses:</span>
+        ${weaknesses.map(d=>`${d.label} (SS=${d.ss})`).join(' · ')}
+      </div>` : ''}
+      ${strengths.length > 0 ? `
+      <div style="font-size:11px;color:var(--text-2)">
+        <span style="color:var(--green);font-weight:600">PSW Strengths:</span>
+        ${strengths.map(d=>`${d.label} (SS=${d.ss})`).join(' · ')}
+      </div>` : ''}
+    </div>`;
+}
+
+// ── Validation ─────────────────────────────────────────────────────────────
+function validate() {
+  const name   = document.getElementById('s-name').value.trim();
+  const grade  = document.getElementById('s-grade').value;
+  const school = document.getElementById('s-school').value.trim();
+  if (!name || !grade || !school) {
+    showValidation('Student name, grade, and school are required.');
+    return false;
+  }
+  const ssVals = DOMAINS
+    .filter(d => !document.getElementById('na-' + d.id)?.checked)
+    .map(d => parseInt(document.getElementById('ss-' + d.id)?.value))
+    .filter(v => !isNaN(v));
+  if (ssVals.length < 3) {
+    showValidation('At least 3 cognitive domain scores are required to run PSW analysis.');
+    return false;
+  }
+  document.getElementById('val-msg').classList.remove('show');
+  return true;
+}
+
+function showValidation(msg) {
+  document.getElementById('val-text').textContent = msg;
+  document.getElementById('val-msg').classList.add('show');
+}
+
+// ── Run analysis ───────────────────────────────────────────────────────────
+function runAnalysis() {
+  if (!validate()) return;
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⟳</span> Running…';
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡</span> Run Full Analysis';
+    showOutputPanel();
+  }, 1800);
+}
+
+function showOutputPanel() {
+  const name = document.getElementById('s-name').value || 'Student';
+  document.getElementById('output-student-name').textContent = name;
+
+  const ssVals = DOMAINS
+    .filter(d => !document.getElementById('na-' + d.id)?.checked)
+    .map(d => ({ id: d.id, label: d.label, ss: parseInt(document.getElementById('ss-' + d.id)?.value) }))
+    .filter(d => !isNaN(d.ss));
+
+  const mean = ssVals.reduce((a,b)=>a+b.ss,0)/ssVals.length;
+  const weaknesses = ssVals.filter(d => d.ss < 85 && d.ss < mean);
+  const strengths  = ssVals.filter(d => d.ss >= 90 && d.ss >= mean);
+
+  let pswStatus = '';
+  if (strengths.length > 0 && weaknesses.length > 0) {
+    pswStatus = `✓ PSW pattern supported — ${strengths.map(d=>d.label).join(', ')} strength(s); ${weaknesses.map(d=>d.label).join(', ')} weakness(es). Student mean: SS ${mean.toFixed(1)}.`;
+  } else if (weaknesses.length === 0) {
+    pswStatus = 'No PSW cognitive weaknesses identified at this time.';
+  } else {
+    pswStatus = 'PSW pattern partially met — review concordance before eligibility determination.';
+  }
+
+  document.getElementById('psw-summary').textContent = pswStatus;
+
+  document.getElementById('output-items').innerHTML = [
+    { icon: '📊', name: 'Analysis Excel', desc: 'Domain profile, concordance, effect sizes, PSW checklist', label: 'XLSX' },
+    { icon: '📈', name: 'Figure Package', desc: 'Cognitive, achievement, behavioral, concordance, PSW summary', label: 'PDF' },
+    { icon: '🖥',  name: 'Interactive Dashboard', desc: 'Self-contained HTML for IEP presentations', label: 'HTML' },
+    { icon: '🧠', name: 'Dyslexia Profile', desc: 'IDA alignment, DDH classification, CDE guidance', label: 'PDF' },
+    { icon: '📝', name: 'Report Draft', desc: 'AI-generated narrative sections — review & edit', label: 'DOCX' },
+  ].map(o => `
+    <div class="output-item" onclick="alert('Download: ${o.name}\\n\\nIn v1.0, this will trigger the Python analysis engine and download the file. Backend integration in progress.')">
+      <span class="output-icon">${o.icon}</span>
+      <div class="output-info">
+        <div class="output-name">${o.name}</div>
+        <div class="output-desc">${o.desc}</div>
+      </div>
+      <span class="output-dl">${o.label}</span>
+    </div>`).join('');
+
+  document.getElementById('output-panel').classList.add('show');
+}
+
+// ── Age calculator ─────────────────────────────────────────────────────────
+function calcAge() {
+  const dob = new Date(document.getElementById('s-dob').value);
+  if (isNaN(dob)) return;
+  const now  = new Date();
+  let years  = now.getFullYear() - dob.getFullYear();
+  let months = now.getMonth() - dob.getMonth();
+  if (months < 0) { years--; months += 12; }
+  document.getElementById('s-age').value = `${years} years, ${months} months`;
+  autosave();
+}
+
+// ── Navigation status dots ─────────────────────────────────────────────────
+function updateNav() {
+  const name = document.getElementById('s-name').value.trim();
+  const grade = document.getElementById('s-grade').value;
+  document.getElementById('nav-student').className =
+    'nav-item' + (name && grade ? ' complete' : '');
+}
+
+// ── Local save/load ────────────────────────────────────────────────────────
+function collectFormData() {
+  const data = {};
+  ['name','dob','age','grade','school','teacher','examiner','evaldate','ethnicity','model','referral']
+    .forEach(f => data[f] = document.getElementById('s-' + f)?.value);
+  data.domains = {};
+  DOMAINS.forEach(d => {
+    data.domains[d.id] = {
+      ss:   document.getElementById('ss-' + d.id)?.value,
+      date: document.getElementById('date-' + d.id)?.value,
+      na:   document.getElementById('na-' + d.id)?.checked,
+    };
+    if (d.subtests_aa) {
+      data.domains[d.id].subtests = d.subtests_aa.map((_, i) => ({
+        raw:   document.getElementById(`sub-${d.id}-${i}`)?.value,
+        equiv: document.getElementById(`ss-equiv-${d.id}-${i}`)?.value,
+      }));
+    }
+  });
+  data.academic = {};
+  ACADEMIC.forEach(a => {
+    data.academic[a.id] = {
+      ss: document.getElementById('ach-ss-' + a.id)?.value,
+      pr: document.getElementById('ach-pr-' + a.id)?.value,
+    };
+  });
+  return data;
+}
+
+function autosave() {
+  try {
+    localStorage.setItem('evalforge_case', JSON.stringify(collectFormData()));
+    document.getElementById('autosave-status').textContent = 'Saved locally · ' +
+      new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {}
+}
+
+function saveCase() {
+  const data = collectFormData();
+  const name = data.name || 'case';
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `EvalForge_${name.replace(/[^a-z0-9]/gi,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function loadCase() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        restoreFormData(data);
+      } catch(err) {
+        alert('Could not parse case file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function restoreFormData(data) {
+  ['name','dob','age','grade','school','teacher','examiner','evaldate','ethnicity','model','referral']
+    .forEach(f => {
+      const el = document.getElementById('s-' + f);
+      if (el && data[f] !== undefined) el.value = data[f];
+    });
+  if (data.ethnicity) updateBattery();
+  if (data.domains) {
+    DOMAINS.forEach(d => {
+      const dd = data.domains[d.id];
+      if (!dd) return;
+      if (dd.ss) {
+        document.getElementById('ss-' + d.id).value = dd.ss;
+        onSSChange(d.id);
+      }
+      if (dd.date) document.getElementById('date-' + d.id).value = dd.date;
+      if (dd.na) {
+        document.getElementById('na-' + d.id).checked = true;
+        toggleNA(d.id);
+      }
+      if (dd.subtests && d.subtests_aa) {
+        dd.subtests.forEach((s, i) => {
+          const rawEl = document.getElementById(`sub-${d.id}-${i}`);
+          if (rawEl && s.raw) {
+            rawEl.value = s.raw;
+            calcSSEquiv(d.id, i, d.subtests_aa[i].type);
+          }
+        });
+      }
+    });
+  }
+  if (data.academic) {
+    ACADEMIC.forEach(a => {
+      const ad = data.academic[a.id];
+      if (!ad) return;
+      if (ad.ss) {
+        document.getElementById('ach-ss-' + a.id).value = ad.ss;
+        onAchChange(a.id);
+      }
+      if (ad.pr) document.getElementById('ach-pr-' + a.id).value = ad.pr;
+    });
+  }
+  updateNav();
+}
+
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem('evalforge_case');
+    if (saved) restoreFormData(JSON.parse(saved));
+  } catch(e) {}
+}
+
+// ── App-level keyboard navigation ─────────────────────────────────────────
+const SECTION_ORDER = ['student', 'cognitive', 'subtests', 'academic', 'review'];
+let currentSectionIdx = 0;
+
+document.addEventListener('keydown', e => {
+  if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault(); navigateSection(1);
+  }
+  if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault(); navigateSection(-1);
+  }
+});
+
+function navigateSection(dir) {
+  const newIdx = Math.max(0, Math.min(SECTION_ORDER.length - 1, currentSectionIdx + dir));
+  if (newIdx !== currentSectionIdx) {
+    currentSectionIdx = newIdx;
+    const name = SECTION_ORDER[currentSectionIdx];
+    // call original directly to avoid recursion
+    document.querySelectorAll('section[id^="section-"]').forEach(s => s.style.display = 'none');
+    document.getElementById('section-' + name).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+    if (name === 'review') buildReviewSummary();
+    window.scrollTo(0, 0);
+    updateAppNavArrows();
+  }
+}
+
+function updateAppNavArrows() {
+  const back = document.getElementById('nav-back');
+  const fwd  = document.getElementById('nav-fwd');
+  if (!back || !fwd) return;
+  if (currentSectionIdx === 0) {
+    back.href = 'Kairos_Extraction.html';
+    back.onclick = null;
+  } else {
+    back.href = '#';
+    back.onclick = (e) => { e.preventDefault(); navigateSection(-1); };
+  }
+  if (currentSectionIdx === SECTION_ORDER.length - 1) {
+    fwd.href = '#';
+    fwd.onclick = goToAnalysis;
+  } else {
+    fwd.href = '#';
+    fwd.onclick = (e) => { e.preventDefault(); navigateSection(1); };
+  }
+}
+
+// Patch showSection to track index and update arrows
+const _baseShowSection = showSection;
+window.showSection = function(name) {
+  _baseShowSection(name);
+  const idx = SECTION_ORDER.indexOf(name);
+  if (idx !== -1) currentSectionIdx = idx;
+  updateAppNavArrows();
+};
+
+function goToAnalysis(e) {
+  if (e) e.preventDefault();
+  window.showSection('review');
+}
+
+// ── Auto-fill from extraction ──────────────────────────────────────────────
+// Reads ef_extracted_scores from localStorage (written by Extraction page)
+// and fills form fields with a staggered animation.
+
+function applyExtractedScores() {
+  let raw;
+  try {
+    raw = localStorage.getItem('ef_extracted_scores');
+    if (!raw) return;
+    localStorage.removeItem('ef_extracted_scores'); // consume once
+  } catch(e) { return; }
+
+  let payload;
+  try { payload = JSON.parse(raw); } catch(e) { return; }
+
+  if (!payload || !payload.mapped) return;
+
+  const mapped = payload.mapped;
+  const fields = Object.entries(mapped);
+  if (fields.length === 0) return;
+
+  // Show banner
+  showExtractionBanner(payload);
+
+  // Stagger fills: 60ms between each field for a typewriter feel
+  let delay = 200; // initial delay after banner appears
+  let filledCount = 0;
+
+  fields.forEach(([fieldId, fieldData]) => {
+    setTimeout(() => {
+      const filled = fillField(fieldId, fieldData);
+      if (filled) filledCount++;
+      // Update banner count live
+      const countEl = document.getElementById('ef-fill-count');
+      if (countEl) countEl.textContent = filledCount;
+    }, delay);
+    delay += 55;
+  });
+
+  // After all fields filled, navigate to cognitive section if student info already done
+  setTimeout(() => {
+    const hasStudent = document.getElementById('s-name')?.value.trim();
+    const hasCognitive = fields.some(([id]) => id.startsWith('ss-'));
+    if (hasCognitive) {
+      window.showSection('cognitive');
+      updateLiveStats();
+    }
+    dismissBanner(3500);
+  }, delay + 400);
+}
+
+function fillField(fieldId, fieldData) {
+  const el = document.getElementById(fieldId);
+  if (!el) return false;
+
+  const val = fieldData.value;
+  if (val === null || val === undefined || isNaN(val)) return false;
+
+  // Flash highlight animation
+  const origBg = el.style.background;
+  el.style.transition = 'background 0.3s, border-color 0.3s';
+  el.style.background  = 'rgba(14,158,138,0.25)';
+  el.style.borderColor = 'var(--teal)';
+
+  el.value = val;
+
+  // Trigger the right onChange handler
+  switch (fieldData.type) {
+    case 'domain_ss':
+      onSSChange(fieldData.domain);
+      break;
+    case 'subtest_raw':
+      // Also fill SS equiv field
+      const equivId = `ss-equiv-${fieldData.domain}-${fieldData.idx}`;
+      const equivEl = document.getElementById(equivId);
+      if (equivEl && fieldData.ssEquiv) {
+        equivEl.value = fieldData.ssEquiv;
+        equivEl.style.color = 'var(--teal)';
+      }
+      break;
+    case 'ach_ss':
+      onAchChange(fieldData.achId);
+      break;
+    case 'ach_pr':
+      // PR fields don't have a special handler — just fill
+      break;
+  }
+
+  // Fade highlight back
+  setTimeout(() => {
+    el.style.background  = origBg || '';
+    el.style.borderColor = '';
+  }, 800);
+
+  autosave();
+  return true;
+}
+
+function showExtractionBanner(payload) {
+  // Remove any existing banner
+  const existing = document.getElementById('ef-extract-banner');
+  if (existing) existing.remove();
+
+  const inst = (payload.instruments || []).join(', ') || 'extracted instruments';
+  const total = Object.keys(payload.mapped || {}).length;
+  const unmapped = (payload.unmapped || []).length;
+
+  const banner = document.createElement('div');
+  banner.id = 'ef-extract-banner';
+  banner.style.cssText = `
+    position: fixed; top: 108px; left: 50%; transform: translateX(-50%);
+    z-index: 500; display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-radius: 10px;
+    background: rgba(14,158,138,0.95); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: #0D1B2A; font-weight: 500;
+    animation: bannerIn 0.3s ease;
+    max-width: 560px; width: calc(100vw - 64px);
+  `;
+
+  banner.innerHTML = `
+    <span style="font-size:20px;flex-shrink:0">✨</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;margin-bottom:2px">
+        Filling <span id="ef-fill-count">0</span> of ${total} extracted fields
+      </div>
+      <div style="font-size:11px;opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${inst}
+        ${unmapped > 0 ? ` · ${unmapped} field${unmapped>1?'s':''} need manual entry` : ''}
+      </div>
+    </div>
+    <button onclick="document.getElementById('ef-extract-banner').remove()"
+            style="background:rgba(0,0,0,0.15);border:none;border-radius:5px;
+                   padding:4px 10px;cursor:pointer;color:#0D1B2A;font-size:12px;
+                   flex-shrink:0">
+      ✕
+    </button>
+  `;
+
+  // Add keyframe if not already present
+  if (!document.getElementById('ef-banner-style')) {
+    const style = document.createElement('style');
+    style.id = 'ef-banner-style';
+    style.textContent = `@keyframes bannerIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }`;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(banner);
+}
+
+function dismissBanner(delay) {
+  setTimeout(() => {
+    const banner = document.getElementById('ef-extract-banner');
+    if (banner) {
+      banner.style.transition = 'opacity 0.4s';
+      banner.style.opacity = '0';
+      setTimeout(() => banner.remove(), 400);
+    }
+  }, delay);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+updateAppNavArrows();
+// Apply extraction results AFTER form is rendered (init builds the DOM)
+setTimeout(applyExtractedScores, 150);
+</script>
+
+<!-- Kairos — Angelic Chord + Sparkle Loading Animation -->
+<canvas id="kairos-sparkle-canvas"
+        style="position:fixed;top:0;left:0;width:100%;height:100%;
+               pointer-events:none;z-index:9999;display:none"></canvas>
+
+<script>
+(function() {
+
+  /* ── FREQUENCIES ── */
+  var STRINGS = [
+    { freq: 379.0,  delay:   0, color: '#A78BFA',
+      partials: [[1,.50,2.20],[2,.22,.55],[3.5,.14,.18],[5,.08,.12],[.501,.06,1.40]] },
+    { freq: 318.4,  delay:  55, color: '#818CF8',
+      partials: [[1,.48,2.30],[2,.20,.60],[3.5,.12,.20],[4.8,.07,.14],[.501,.06,1.50]] },
+    { freq: 238.3,  delay: 110, color: '#0E9E8A',
+      partials: [[1,.52,2.40],[2,.22,.65],[3.2,.13,.22],[4.5,.07,.16],[.502,.07,1.60]] },
+    { freq: 142.0,  delay: 165, color: '#C8922A',
+      partials: [[1,.55,2.50],[2,.24,.70],[3,.14,.25],[4.2,.07,.18],[.501,.08,1.80]] },
+    { freq:  94.7,  delay: 220, color: '#D43F66',
+      partials: [[1,.62,2.80],[2,.28,.80],[3,.14,.30],[.5,.09,2.20],[4,.05,.22]] },
+  ];
+
+  var audioCtx = null;
+
+  function getCtx() {
+    if (!audioCtx)
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playString(str, masterGain, ctx, t0) {
+    str.partials.forEach(function(p) {
+      var mult=p[0], gain=p[1], decay=p[2];
+      var osc = ctx.createOscillator();
+      var env = ctx.createGain();
+      osc.type = mult > 2.5 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(str.freq * mult, t0);
+      osc.frequency.exponentialRampToValueAtTime(str.freq * mult * 0.9985, t0 + 0.06);
+      env.gain.setValueAtTime(0.0001, t0);
+      env.gain.linearRampToValueAtTime(gain, t0 + 0.002);
+      env.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+      osc.connect(env); env.connect(masterGain);
+      osc.start(t0); osc.stop(t0 + decay + 0.05);
+    });
+  }
+
+  function playAngelicChord(vol) {
+    vol = vol || 0.82;
+    try {
+      var ctx = getCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+
+      var master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(vol * 0.38, now + 0.30);
+      master.gain.setValueAtTime(vol * 0.38, now + 0.34);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 2.85);
+
+      var dly = ctx.createDelay(0.08);
+      var fb  = ctx.createGain();
+      var wet = ctx.createGain();
+      dly.delayTime.setValueAtTime(0.032, now);
+      fb.gain.setValueAtTime(0.22, now);
+      wet.gain.setValueAtTime(0.16, now);
+      dly.connect(fb); fb.connect(dly); dly.connect(wet);
+      wet.connect(master); master.connect(ctx.destination);
+
+      var dry = ctx.createGain();
+      dry.gain.setValueAtTime(0.86, now);
+      dry.connect(master);
+
+      STRINGS.forEach(function(str) {
+        var t = now + str.delay / 1000;
+        var sg = ctx.createGain();
+        sg.gain.setValueAtTime(1.0, t);
+        sg.connect(dry); sg.connect(dly);
+        playString(str, sg, ctx, t);
+      });
+    } catch(e) { console.warn('Kairos audio:', e); }
+  }
+
+  /* ── SPARKLE CANVAS ── */
+  var canvas = document.getElementById('kairos-sparkle-canvas');
+  var sparks = [];
+  var sparkRAF = null;
+
+  function triggerSparkles() {
+    canvas.style.display = 'block';
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    STRINGS.forEach(function(str, i) {
+      setTimeout(function() {
+        var cnt = [22,18,14,11,10][i];
+        var cx  = window.innerWidth  * 0.5;
+        var cy  = window.innerHeight * 0.42;
+        for (var j = 0; j < cnt; j++) {
+          var a  = Math.random() * Math.PI * 2;
+          var sp = 0.6 + Math.random() * 2.8;
+          var sz = 1.4 + Math.random() * 2.6;
+          sparks.push({
+            x: cx + (Math.random()-0.5)*60,
+            y: cy + (Math.random()-0.5)*40,
+            vx: Math.cos(a)*sp,
+            vy: Math.sin(a)*sp - 0.4 - i*0.12,
+            size: sz, color: str.color, life: 1.0,
+            decay: 0.007 + Math.random()*0.010,
+            tw: Math.random()*Math.PI*2,
+            tws: 4 + Math.random()*9,
+          });
+        }
+      }, str.delay);
+    });
+
+    if (sparkRAF) cancelAnimationFrame(sparkRAF);
+    drawSparkLoop();
+  }
+
+  function drawSparkLoop() {
+    var ctx2 = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (var i = sparks.length-1; i >= 0; i--) {
+      var s = sparks[i];
+      s.x += s.vx; s.y += s.vy; s.vy += 0.014;
+      s.life -= s.decay; s.tw += s.tws * 0.016;
+      if (s.life <= 0) { sparks.splice(i,1); continue; }
+      var twOp = 0.5 + 0.5*Math.sin(s.tw);
+      var op   = s.life * twOp;
+      var sz   = s.size * (0.6 + 0.4*twOp);
+      ctx2.save(); ctx2.globalAlpha = op; ctx2.translate(s.x, s.y);
+      ctx2.beginPath();
+      var OR = sz*2.2, IR = sz*0.7;
+      for (var a2 = 0; a2 < 8; a2++) {
+        var r2  = a2%2===0 ? OR : IR;
+        var ang = (a2/8)*Math.PI*2 - Math.PI/4;
+        if (a2===0) ctx2.moveTo(Math.cos(ang)*r2, Math.sin(ang)*r2);
+        else        ctx2.lineTo(Math.cos(ang)*r2, Math.sin(ang)*r2);
+      }
+      ctx2.closePath(); ctx2.fillStyle = s.color; ctx2.fill();
+      if (op > 0.3) {
+        var g = ctx2.createRadialGradient(0,0,0,0,0,OR*2.8);
+        var hexOp = Math.round(op*50).toString(16).padStart(2,'0');
+        g.addColorStop(0, s.color + hexOp);
+        g.addColorStop(1, s.color + '00');
+        ctx2.beginPath(); ctx2.arc(0,0,OR*2.8,0,Math.PI*2);
+        ctx2.fillStyle = g; ctx2.fill();
+      }
+      ctx2.restore();
+    }
+
+    if (sparks.length > 0) {
+      sparkRAF = requestAnimationFrame(drawSparkLoop);
+    } else {
+      canvas.style.display = 'none';
+    }
+  }
+
+  /* ── PAGE LOAD TRIGGER ── */
+  // Fire on DOMContentLoaded — gives the page a moment to render first
+  function onReady() {
+    // Small delay so the user sees the page before sound+sparkle
+    setTimeout(function() {
+      playAngelicChord(0.78);
+      triggerSparkles();
+    }, 420);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+
+  // Expose for manual replay (e.g. from logo click)
+  window.kairosPlayChord = function() {
+    playAngelicChord(0.82);
+    triggerSparkles();
+  };
+
+})();
+</script>
+
+
+<script>
+const BACKEND = 'https://web-production-66ab2.up.railway.app';
+let AUTH_TOKEN = localStorage.getItem('kairos_token') || '';
+let authMode = 'signin';
+
+function openAuthModal() {
+  document.getElementById('auth-modal').classList.add('show');
+}
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.remove('show');
+}
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-signin').classList.toggle('active', mode === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!email || !password) {
+    errEl.textContent = 'Please enter email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    const endpoint = authMode === 'signup' ? '/auth/signup' : '/auth/signin';
+    const res = await fetch(BACKEND + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Authentication failed');
+    AUTH_TOKEN = data.access_token;
+    localStorage.setItem('kairos_token', AUTH_TOKEN);
+    closeAuthModal();
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('auth-btn').onclick = signOut;
+    loadTrialStatus();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function loadTrialStatus() {
+  if (!AUTH_TOKEN) return;
+  try {
+    const res = await fetch(BACKEND + '/trial-status', {
+      headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const badge = document.getElementById('trial-badge');
+    badge.style.display = 'inline';
+    if (data.is_subscribed) {
+      badge.textContent = '✓ Subscribed';
+      badge.className = 'trial-badge subscribed';
+    } else {
+      badge.textContent = (data.remaining ?? 0) + ' analyses left';
+      badge.className = 'trial-badge';
+    }
+  } catch(e) {}
+}
+
+function signOut() {
+  AUTH_TOKEN = '';
+  localStorage.removeItem('kairos_token');
+  document.getElementById('auth-btn').textContent = 'Sign In';
+  document.getElementById('auth-btn').onclick = openAuthModal;
+  document.getElementById('trial-badge').style.display = 'none';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (AUTH_TOKEN) {
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('auth-btn').onclick = signOut;
+    loadTrialStatus();
+  }
+});
+</script>
+
+</body>
+</html>

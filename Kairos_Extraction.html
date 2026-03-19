@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kairos — Score Report Extraction</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<!-- pdf.js for client-side PDF rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --navy:       #112030;
+  --navy-2:     #182d42;
+  --navy-3:     #1E3A52;
+  --slate:      #2C4A6B;
+  --teal:       #0E9E8A;
+  --teal-dim:   #0A7A69;
+  --teal-glow:  rgba(14,158,138,0.15);
+  --amber:      #F59E0B;
+  --amber-dim:  rgba(245,158,11,0.12);
+  --red:        #EF4444;
+  --red-dim:    rgba(239,68,68,0.12);
+  --green:      #22C55E;
+  --green-dim:  rgba(34,197,94,0.10);
+  --purple:     #8B5CF6;
+  --purple-dim: rgba(139,92,246,0.12);
+  --text-1:     #F0F4F8;
+  --text-2:     #94A3B8;
+  --text-3:     #64748B;
+  --border:     rgba(255,255,255,0.07);
+  --border-2:   rgba(255,255,255,0.12);
+  --input-bg:   rgba(255,255,255,0.04);
+  --input-focus:rgba(14,158,138,0.20);
+  --radius:     8px;
+  --radius-lg:  14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--navy);
+  color: var(--text-1);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 10% 0%, rgba(14,158,138,0.09) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 60px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(17,32,48,0.92);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.logo-mark {
+  width:32px; height:32px; background:var(--teal);
+  border-radius:7px; display:flex; align-items:center;
+  justify-content:center; font-family:'DM Mono',monospace;
+  font-weight:500; font-size:13px; color:var(--navy);
+}
+.logo-text { font-family:'Playfair Display',serif; font-size:17px; color:var(--text-1); }
+.header-tag {
+  font-family:'DM Mono',monospace; font-size:10px; color:var(--purple);
+  background:var(--purple-dim); border:1px solid rgba(139,92,246,0.25);
+  padding:3px 8px; border-radius:4px; letter-spacing:0.5px;
+}
+
+/* ── Layout ── */
+.main { max-width: 1100px; margin: 0 auto; padding: 36px 32px; }
+
+.page-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px; font-weight: 500;
+  color: var(--text-1); margin-bottom: 6px;
+}
+.page-sub { font-size: 13px; color: var(--text-2); margin-bottom: 32px; line-height: 1.5; }
+
+/* ── Steps indicator ── */
+.steps {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 36px;
+}
+.step {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; border-radius: var(--radius);
+  font-size: 12px; font-weight: 500; color: var(--text-3);
+  transition: all 0.2s;
+}
+.step.active { color: var(--teal); background: var(--teal-glow); }
+.step.done   { color: var(--green); }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; font-size: 10px; flex-shrink: 0;
+}
+.step-connector {
+  flex: 1; height: 1px; background: var(--border); max-width: 40px;
+}
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed var(--border-2);
+  border-radius: var(--radius-lg);
+  padding: 56px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: var(--input-bg);
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--teal);
+  background: var(--teal-glow);
+}
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+.upload-title { font-size: 17px; font-weight: 600; color: var(--text-1); margin-bottom: 6px; }
+.upload-sub { font-size: 13px; color: var(--text-2); margin-bottom: 20px; line-height: 1.5; }
+.upload-formats {
+  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+}
+.format-tag {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.5px;
+  padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-2);
+  color: var(--text-2);
+}
+
+/* ── Instrument selector ── */
+.instrument-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 24px;
+}
+.instrument-card {
+  padding: 14px; border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer;
+  transition: all 0.15s; background: var(--input-bg);
+  user-select: none;
+}
+.instrument-card:hover { border-color: var(--border-2); }
+.instrument-card.selected {
+  border-color: var(--teal);
+  background: var(--teal-glow);
+}
+.instrument-card.selected .inst-name { color: var(--teal); }
+.inst-name { font-size: 12px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+.inst-domain {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--teal); letter-spacing: 0.5px;
+}
+.inst-desc { font-size: 10px; color: var(--text-3); margin-top: 4px; line-height: 1.3; }
+
+/* ── Processing state ── */
+.processing-panel {
+  display: none; text-align: center; padding: 48px;
+  background: var(--navy-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.processing-panel.show { display: block; }
+
+.spinner {
+  width: 48px; height: 48px; margin: 0 auto 20px;
+  border: 3px solid var(--border);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.processing-title { font-size: 16px; font-weight: 600; color: var(--text-1); margin-bottom: 6px; }
+.processing-sub   { font-size: 12px; color: var(--text-2); margin-bottom: 20px; }
+
+.progress-steps { text-align: left; max-width: 320px; margin: 0 auto; }
+.progress-step {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0; font-size: 12px; color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+}
+.progress-step:last-child { border: none; }
+.progress-step.done  { color: var(--green); }
+.progress-step.active{ color: var(--teal); }
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+.step-dot.pulse { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Review table ── */
+.review-panel { display: none; }
+.review-panel.show { display: block; }
+
+.review-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.review-title-block .review-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; color: var(--text-1); margin-bottom: 3px;
+}
+.review-title-block .review-sub { font-size: 12px; color: var(--text-2); }
+
+.confidence-badge {
+  padding: 6px 14px; border-radius: 20px;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+}
+.confidence-badge.high   { background:var(--green-dim);  color:var(--green);  border:1px solid rgba(34,197,94,0.2); }
+.confidence-badge.medium { background:var(--amber-dim);  color:var(--amber);  border:1px solid rgba(245,158,11,0.2); }
+.confidence-badge.low    { background:var(--red-dim);    color:var(--red);    border:1px solid rgba(239,68,68,0.2); }
+
+.review-notice {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--radius);
+  background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.2);
+  margin-bottom: 20px; font-size: 12px; color: #FCD34D; line-height: 1.5;
+}
+
+.extracted-table {
+  width: 100%; border-collapse: separate; border-spacing: 0 3px;
+  margin-bottom: 20px;
+}
+.extracted-table thead th {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-3); padding: 6px 12px;
+  text-align: left; font-weight: 400;
+}
+.extracted-table thead th:nth-child(n+3) { text-align: center; }
+
+.extracted-row td {
+  padding: 10px 12px;
+  background: var(--navy-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.extracted-row td:first-child {
+  border-left: 1px solid var(--border);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.extracted-row td:last-child {
+  border-right: 1px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.extracted-row:hover td { background: rgba(255,255,255,0.04); }
+
+.field-name { font-size: 12.5px; color: var(--text-1); }
+.field-instrument { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+
+.extracted-val {
+  font-family: 'DM Mono', monospace; font-size: 15px;
+  font-weight: 500; text-align: center;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 5px; color: var(--teal);
+  padding: 4px 8px; width: 72px; outline: none;
+  transition: all 0.15s;
+}
+.extracted-val:focus {
+  border-color: var(--teal); background: var(--input-focus);
+}
+.extracted-val.flagged { color: var(--amber); border-color: var(--amber); }
+.extracted-val.error   { color: var(--red);   border-color: rgba(239,68,68,0.4); }
+
+.confidence-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin: 0 auto;
+}
+.conf-high   { background: var(--green); }
+.conf-medium { background: var(--amber); }
+.conf-low    { background: var(--red); }
+
+.flag-note {
+  font-size: 10px; color: var(--amber); margin-top: 3px;
+}
+
+.verify-check {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-2); cursor: pointer;
+  user-select: none;
+}
+.verify-check input { accent-color: var(--green); width:13px; height:13px; cursor: pointer; }
+
+/* ── Page thumbnails ── */
+.page-thumbs {
+  display: flex; gap: 8px; margin-bottom: 16px;
+  overflow-x: auto; padding-bottom: 6px;
+}
+.page-thumb {
+  flex-shrink: 0; cursor: pointer;
+  border: 2px solid var(--border); border-radius: 6px;
+  overflow: hidden; transition: border-color 0.15s;
+}
+.page-thumb.active { border-color: var(--teal); }
+.page-thumb canvas { display: block; width: 80px; height: auto; }
+.page-thumb-label {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--text-3); text-align: center; padding: 3px 0;
+}
+
+/* ── Image preview ── */
+.preview-pane {
+  display: flex; gap: 24px; margin-bottom: 28px;
+}
+.preview-image-wrap {
+  flex-shrink: 0; width: 280px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; background: var(--navy-3);
+}
+.preview-image-wrap canvas,
+.preview-image-wrap img {
+  width: 100%; display: block;
+}
+.preview-label {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--text-3); text-align: center;
+  padding: 6px; border-top: 1px solid var(--border);
+}
+
+/* ── Action buttons ── */
+.action-row {
+  display: flex; align-items: center; gap: 12px;
+  padding-top: 16px; border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.btn-primary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 24px; background: var(--teal);
+  color: var(--navy); border: none; border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-primary:hover { background: #0BB89F; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(14,158,138,0.3); }
+.btn-primary:disabled { background: var(--slate); color: var(--text-3); cursor:not-allowed; transform:none; box-shadow:none; }
+
+.btn-secondary {
+  padding: 11px 20px; background: transparent;
+  color: var(--text-2); border: 1px solid var(--border);
+  border-radius: var(--radius); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.btn-secondary:hover { border-color: var(--border-2); color: var(--text-1); }
+
+.action-note { font-size: 11px; color: var(--text-3); line-height: 1.4; }
+
+/* ── Success state ── */
+.success-panel {
+  display: none; text-align: center; padding: 48px;
+  background: var(--navy-2); border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--radius-lg);
+}
+.success-panel.show { display: block; }
+.success-icon { font-size: 52px; margin-bottom: 16px; }
+.success-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--text-1); margin-bottom: 6px; }
+.success-sub { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
+.filled-summary {
+  display: flex; justify-content: center; gap: 24px;
+  flex-wrap: wrap; margin-bottom: 24px;
+}
+.filled-stat { text-align: center; }
+.filled-stat .num { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; color: var(--teal); }
+.filled-stat .lbl { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* ── Multi-file queue ── */
+.file-queue { margin-bottom: 24px; }
+.file-queue-title {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 10px;
+}
+.file-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: var(--input-bg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 6px; transition: all 0.15s;
+}
+.file-item.processing { border-color: var(--teal); background: var(--teal-glow); }
+.file-item.done { border-color: rgba(34,197,94,0.3); }
+.file-item.error { border-color: rgba(239,68,68,0.3); }
+.file-icon { font-size: 20px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 12px; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+.file-status {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  padding: 3px 8px; border-radius: 4px;
+}
+.file-status.pending    { color: var(--text-3); background: rgba(255,255,255,0.05); }
+.file-status.processing { color: var(--teal);   background: var(--teal-glow); }
+.file-status.done       { color: var(--green);  background: var(--green-dim); }
+.file-status.error      { color: var(--red);    background: var(--red-dim); }
+.file-remove { color: var(--text-3); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+.file-remove:hover { color: var(--red); }
+
+/* ── Section card ── */
+.card {
+  background: var(--navy-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px;
+}
+.card-title {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── App-level navigation bar ── */
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 32px;
+  height: 44px;
+  background: rgba(17,32,48,0.65);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+  overflow-x: auto;
+}
+.app-nav-arrow {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--input-bg);
+  color: var(--text-2); cursor: pointer; font-size: 14px;
+  flex-shrink: 0; transition: all 0.15s; text-decoration: none; user-select: none;
+}
+.app-nav-arrow:hover:not(.disabled) { border-color: var(--teal); color: var(--teal); background: var(--teal-glow); }
+.app-nav-arrow.disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
+.app-nav-steps { display: flex; align-items: center; gap: 0; flex: 1; justify-content: center; }
+.app-nav-step {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 6px; font-size: 12px;
+  color: var(--text-3); cursor: pointer; transition: all 0.15s;
+  text-decoration: none; white-space: nowrap; user-select: none;
+}
+.app-nav-step:hover:not(.current) { color: var(--text-2); background: var(--input-bg); }
+.app-nav-step.current { color: var(--teal); background: var(--teal-glow); font-weight: 500; }
+.app-nav-step.done { color: var(--text-2); }
+.app-nav-step .step-n {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.app-nav-step.current .step-n { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
+.app-nav-step.done .step-n { background: rgba(34,197,94,0.15); border-color: var(--green); color: var(--green); }
+.app-nav-divider { width: 28px; height: 1px; background: var(--border); flex-shrink: 0; }
+.app-nav-kbd {
+  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text-3);
+  border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px;
+  margin-left: 8px; flex-shrink: 0;
+}
+/* ── Auth Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--navy-2); border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg); padding: 36px; width: 100%; max-width: 420px;
+}
+.modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 6px; }
+.modal p { color: var(--text-2); font-size: 13px; margin-bottom: 24px; }
+.modal input {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius);
+  border: 1px solid var(--border-2); background: var(--input-bg);
+  color: var(--text-1); font-size: 14px; margin-bottom: 12px;
+}
+.modal input:focus { outline: none; border-color: var(--teal); background: var(--input-focus); }
+.modal-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.modal-tab {
+  flex: 1; padding: 8px; border-radius: var(--radius); border: 1px solid var(--border-2);
+  background: transparent; color: var(--text-2); cursor: pointer; font-size: 13px;
+  transition: all 0.2s;
+}
+.modal-tab.active { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 600; }
+.modal-error { color: var(--red); font-size: 12px; margin-bottom: 10px; display: none; }
+.trial-badge {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.3);
+  color: var(--amber); padding: 4px 10px; border-radius: 4px; cursor: pointer;
+}
+.trial-badge.subscribed { background: var(--green-dim); border-color: rgba(34,197,94,0.3); color: var(--green); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark"><svg width="20" height="27" viewBox="0 0 70 80" fill="none"><path d="M 28 5 C 45 10 60 21 56 40 C 52 58 44 70 28 75" stroke="rgba(4,52,42,0.80)" stroke-width="9.5" stroke-linecap="round" fill="none"/><path d="M 28 5 C 46 10 61 22 57 40 C 53 58 44 71 28 75" stroke="#064034" stroke-width="7.0" stroke-linecap="round" fill="none"/><path d="M 28.5 7 C 44 12 57 24 53.5 40 C 50 56 42.5 69 28.5 73" stroke="rgba(10,100,80,0.55)" stroke-width="3.5" stroke-linecap="round" fill="none"/><ellipse cx="28" cy="5" rx="3.5" ry="2.2" fill="rgba(2,30,24,0.95)"/><ellipse cx="28" cy="75" rx="3.5" ry="2.2" fill="rgba(2,30,24,0.95)"/><ellipse cx="44" cy="20" rx="3.0" ry="1.6" transform="rotate(-42,44,20)" fill="rgba(2,30,24,0.60)"/><ellipse cx="56" cy="40" rx="2.8" ry="1.8" transform="rotate(8,56,40)" fill="rgba(2,30,24,0.55)"/><ellipse cx="46" cy="61" rx="2.8" ry="1.5" transform="rotate(32,46,61)" fill="rgba(2,30,24,0.58)"/><path d="M 28 5 Q 20 40 28 75" stroke="#F0F4F8" stroke-width="1.2" opacity="0.65" fill="none"/><path d="M 1 57 Q 22 40.5 43 22" stroke="#F0F4F8" stroke-width="2.8" stroke-linecap="round" fill="none"/><path d="M 43 22 L 38.5 28.5 L 40.5 25.5 L 44.5 30 L 47.5 26 Z" fill="#FFF0F3" opacity="0.95"/><path d="M 1 57 C -2 52 -5 47 -2 43 C 1 39 8 41 11 47 C 10 50 6 53 1 57 Z" fill="rgba(2,40,30,0.65)"/><path d="M 1 57 C 4 61 7 64 6 67 C 4 70 -1 67 -0.5 62 C 0 60 1 58 1 57 Z" fill="rgba(2,40,30,0.50)"/></svg></div>
+    <span class="logo-text">Kairos</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="header-tag">Score Report Extraction · Beta</span>
+    <span id="trial-badge" class="trial-badge" onclick="openAuthModal()" style="display:none;"></span>
+    <button id="auth-btn" onclick="openAuthModal()" style="background:var(--teal);border:none;color:var(--navy);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Sign In</button>
+  </div>
+</header>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>Welcome to Kairos</h2>
+    <p>Sign in or create an account to get 3 free analyses.</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="modal-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div class="modal-error" id="auth-error"></div>
+    <input type="email" id="auth-email" placeholder="Email address" />
+    <input type="password" id="auth-password" placeholder="Password" />
+    <button onclick="submitAuth()" style="width:100%;padding:11px;background:var(--teal);border:none;border-radius:var(--radius);color:var(--navy);font-weight:600;font-size:14px;cursor:pointer;margin-top:4px;">Continue</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-3);">3 free analyses · No credit card required</p>
+  </div>
+</div>
+
+<!-- ── App-level navigation ── -->
+<nav class="app-nav">
+  <span class="app-nav-arrow disabled" title="No previous step">←</span>
+  <div class="app-nav-steps">
+    <div class="app-nav-step current">
+      <span class="step-n">1</span> Score Extraction
+    </div>
+    <div class="app-nav-divider"></div>
+    <a class="app-nav-step" href="Kairos_ScoreEntry.html" title="Go to Score Entry">
+      <span class="step-n">2</span> Score Entry
+    </a>
+    <div class="app-nav-divider"></div>
+    <a class="app-nav-step" href="Kairos_ScoreEntry.html" title="Go to Review & Run">
+      <span class="step-n">3</span> Review &amp; Run
+    </a>
+    <div class="app-nav-divider"></div>
+    <a class="app-nav-step" href="Kairos_ScoreEntry.html" title="Outputs">
+      <span class="step-n">4</span> Outputs
+    </a>
+  </div>
+  <a class="app-nav-arrow" href="Kairos_ScoreEntry.html" title="Continue to Score Entry (→)">→</a>
+  <span class="app-nav-kbd" title="Use arrow keys to navigate between pages">← →</span>
+</nav>
+
+<div class="main">
+  <div class="page-title">Score Report Extraction</div>
+  <div class="page-sub">
+    Upload PDF or photo score reports from any instrument. EvalForge extracts scores using AI vision,
+    lets you review and correct every value, then auto-fills your evaluation form.
+    No student data is sent to any server — extraction runs via secure API call and results stay local.
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step-1"><div class="step-num">1</div> Upload Reports</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-2"><div class="step-num">2</div> Extracting</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-3"><div class="step-num">3</div> Review Scores</div>
+    <div class="step-connector"></div>
+    <div class="step" id="step-4"><div class="step-num">4</div> Apply to Form</div>
+  </div>
+
+  <!-- ── STEP 1: Upload ── -->
+  <div id="panel-upload">
+
+    <!-- Instrument selector -->
+    <div class="card">
+      <div class="card-title">Select Instrument(s) in this Upload</div>
+      <div class="instrument-grid" id="instrument-grid"></div>
+      <div style="font-size:11px;color:var(--text-3)">
+        Select all instruments present in your upload. EvalForge will look for scores from each.
+        You can upload one multi-instrument PDF or separate files per instrument.
+      </div>
+    </div>
+
+    <!-- File queue -->
+    <div class="file-queue" id="file-queue" style="display:none">
+      <div class="file-queue-title">Queued Files</div>
+      <div id="file-list"></div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="upload-zone" id="upload-zone"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" id="file-input" accept=".pdf,image/*" multiple
+             onchange="onFileSelect(event)"/>
+      <span class="upload-icon">📄</span>
+      <div class="upload-title">Drop score reports here or click to browse</div>
+      <div class="upload-sub">
+        Supports printed score reports from Q-global, PARiConnect, CTOPP-2 scoring software,<br/>
+        TAPS-4, TVPS-4, Beery VMI, WJ-IV, WISC-V, BASC-3, Conners 4, and handwritten records.
+      </div>
+      <div class="upload-formats">
+        <span class="format-tag">PDF</span>
+        <span class="format-tag">PNG</span>
+        <span class="format-tag">JPG</span>
+        <span class="format-tag">HEIC</span>
+        <span class="format-tag">WEBP</span>
+        <span class="format-tag">Multi-page</span>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;align-items:center;gap:12px">
+      <button class="btn-primary" id="extract-btn" onclick="startExtraction()" disabled>
+        <span>🔍</span> Extract Scores
+      </button>
+      <div class="action-note">
+        Uses Claude Haiku vision API · ~$0.004 per page · Results stay in your browser
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Processing ── -->
+  <div class="processing-panel" id="panel-processing">
+    <div class="spinner"></div>
+    <div class="processing-title">Extracting scores…</div>
+    <div class="processing-sub" id="proc-subtitle">Reading score report</div>
+    <div class="progress-steps" id="proc-steps"></div>
+  </div>
+
+  <!-- ── STEP 3: Review ── -->
+  <div class="review-panel" id="panel-review">
+    <div class="review-header">
+      <div class="review-title-block">
+        <div class="review-title">Review Extracted Scores</div>
+        <div class="review-sub">Verify every value before applying to your evaluation form. Edit any cell directly.</div>
+      </div>
+      <span class="confidence-badge high" id="confidence-badge">High confidence</span>
+    </div>
+
+    <div class="review-notice">
+      <span style="font-size:16px;flex-shrink:0">⚠</span>
+      <span>
+        AI extraction is a starting point, not a final answer. Always verify scores against the original
+        report before running analysis. You hold clinical responsibility for all values.
+        Cells with lower confidence are highlighted — review these first.
+      </span>
+    </div>
+
+    <div class="preview-pane" id="preview-pane"></div>
+
+    <div id="review-tables"></div>
+
+    <div class="action-row">
+      <button class="btn-primary" id="apply-btn" onclick="applyToForm()" disabled>
+        <span>✓</span> Apply to Score Entry Form
+      </button>
+      <button class="btn-secondary" onclick="resetToUpload()">↩ Upload Different File</button>
+      <div class="action-note">
+        All <span id="verified-count">0</span> / <span id="total-count">0</span> scores verified.<br/>
+        Check all rows to enable apply.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: Success ── -->
+  <div class="success-panel" id="panel-success">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Scores Verified &amp; Mapped</div>
+    <div class="success-sub">Redirecting to Score Entry form in <span id="redirect-count">3</span>s…</div>
+    <div class="filled-summary" id="filled-summary"></div>
+    <button class="btn-primary" onclick="window.location.href='Kairos_ScoreEntry.html'" style="margin:0 auto">
+      → Continue to Score Entry
+    </button>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── Configuration ─────────────────────────────────────────────────────────
+// In production: store API key server-side, never in client code.
+// For demo/local-first use only. Replace with your FastAPI endpoint in production.
+const API_ENDPOINT = 'https://web-production-66ab2.up.railway.app/extract';
+const MODEL = 'claude-haiku-4-5-20251001'; // Haiku: fast, cheap, sufficient for extraction
+
+// Set your API key here for local testing only
+// In production this call goes through your FastAPI backend
+const BACKEND_URL = 'https://web-production-66ab2.up.railway.app';
+let ANTHROPIC_API_KEY = localStorage.getItem('ef_api_key') || ''; // legacy, unused in production
+let AUTH_TOKEN = localStorage.getItem('kairos_token') || '';
+
+// ── Instrument definitions ─────────────────────────────────────────────────
+const INSTRUMENTS = [
+  // CHC Cognitive
+  { id: 'wj4_cog',   name: 'WJ-IV Cognitive',         domain: 'Gf · Gc · Glr · Gsm · Gs',  desc: 'Standard & Extended batteries' },
+  { id: 'wisc5',     name: 'WISC-V',                   domain: 'Gc · Gf · Gv · Gsm · Gs',   desc: 'FSIQ + index scores' },
+  { id: 'kabc2',     name: 'KABC-II',                  domain: 'Gf · Gc · Gv · Gsm · Glr',  desc: 'CHC model scoring' },
+  // AA-specific
+  { id: 'taps4',     name: 'TAPS-4',                   domain: 'Gc · Gsm',                   desc: 'LCI + Auditory Memory' },
+  { id: 'ctopp2',    name: 'CTOPP-2',                  domain: 'Ga · Glr',                   desc: 'PA Composite + RAN' },
+  { id: 'tvps4',     name: 'TVPS-4',                   domain: 'Gv',                         desc: 'All 7 subtests' },
+  { id: 'beery',     name: 'Beery VMI-6',              domain: 'Gv',                         desc: 'VMI + VP + MC' },
+  { id: 'color_trails', name: 'Color Trails Test',     domain: 'Gs',                         desc: 'CTT-1 & CTT-2' },
+  // Achievement
+  { id: 'wj4_ach',   name: 'WJ-IV Achievement',        domain: 'Grw · Gq',                   desc: 'ACH + OL clusters' },
+  { id: 'wiat4',     name: 'WIAT-4',                   domain: 'Grw · Gq',                   desc: 'Reading + Math + Writing' },
+  { id: 'ktea3',     name: 'KTEA-3',                   domain: 'Grw · Gq',                   desc: 'Brief & Comprehensive' },
+  // Behavioral
+  { id: 'basc3',     name: 'BASC-3',                   domain: 'Behavioral',                 desc: 'PRS + TRS composites & scales' },
+  { id: 'conners4',  name: 'Conners 4',                domain: 'ADHD',                       desc: 'Parent + Teacher T-scores' },
+  { id: 'asrs',      name: 'ASRS (6–18)',              domain: 'ASD',                        desc: 'Parent + Teacher subscales' },
+];
+
+// ── Extraction prompt templates ────────────────────────────────────────────
+// Each instrument has a tailored extraction schema for maximum accuracy
+const EXTRACTION_PROMPTS = {
+  taps4: `
+Extract scores from this TAPS-4 (Test of Auditory Processing Skills, 4th Edition) score report.
+Return ONLY valid JSON, no markdown, no explanation.
+
+Extract these scores. Use null if not found or not administered.
+Scale scores (1-19) and standard scores (55-145) may both appear.
+The Listening Comprehension Index (LCI) is the primary composite.
+
+{
+  "instrument": "TAPS-4",
+  "composites": {
+    "LCI_SS": null,
+    "LCI_PR": null,
+    "Auditory_Memory_Index_SS": null,
+    "Auditory_Memory_Index_PR": null
+  },
+  "subtests": {
+    "Processing_Oral_Directions_ScS": null,
+    "Auditory_Comprehension_ScS": null,
+    "Number_Memory_Forward_ScS": null,
+    "Word_Memory_ScS": null,
+    "Sentence_Memory_ScS": null
+  },
+  "confidence": "high|medium|low",
+  "notes": "any anomalies or unclear values"
+}`,
+
+  ctopp2: `
+Extract scores from this CTOPP-2 (Comprehensive Test of Phonological Processing, 2nd Edition) score report.
+Return ONLY valid JSON, no markdown, no explanation.
+
+{
+  "instrument": "CTOPP-2",
+  "composites": {
+    "Phonological_Awareness_SS": null,
+    "Phonological_Awareness_PR": null,
+    "Phonological_Memory_SS": null,
+    "Phonological_Memory_PR": null,
+    "Rapid_Symbolic_Naming_SS": null,
+    "Rapid_Symbolic_Naming_PR": null,
+    "Rapid_Nonsymbolic_Naming_SS": null
+  },
+  "subtests": {
+    "Elision_ScS": null,
+    "Blending_Words_ScS": null,
+    "Phoneme_Isolation_ScS": null,
+    "Memory_for_Digits_ScS": null,
+    "Nonword_Repetition_ScS": null,
+    "Rapid_Digit_Naming_ScS": null,
+    "Rapid_Letter_Naming_ScS": null,
+    "Rapid_Color_Naming_ScS": null,
+    "Rapid_Object_Naming_ScS": null
+  },
+  "confidence": "high|medium|low",
+  "notes": ""
+}`,
+
+  tvps4: `
+Extract scores from this TVPS-4 (Test of Visual Perceptual Skills, 4th Edition) score report.
+Return ONLY valid JSON, no markdown, no explanation.
+Scale scores are 1-19, Overall SS is a standard score (M=100, SD=15).
+
+{
+  "instrument": "TVPS-4",
+  "composites": {
+    "Overall_SS": null,
+    "Overall_PR": null
+  },
+  "subtests": {
+    "Visual_Discrimination_ScS": null,
+    "Visual_Memory_ScS": null,
+    "Spatial_Relationships_ScS": null,
+    "Form_Constancy_ScS": null,
+    "Sequential_Memory_ScS": null,
+    "Figure_Ground_ScS": null,
+    "Visual_Closure_ScS": null
+  },
+  "confidence": "high|medium|low",
+  "notes": ""
+}`,
+
+  wj4_ach: `
+Extract scores from this WJ-IV Tests of Achievement score report.
+Return ONLY valid JSON, no markdown, no explanation.
+All scores should be standard scores (SS, M=100 SD=15) unless noted.
+RPI values are in format like "90/90" - extract as string.
+
+{
+  "instrument": "WJ-IV Achievement",
+  "clusters": {
+    "Broad_Reading_SS": null,      "Broad_Reading_PR": null,
+    "Basic_Reading_Skills_SS": null, "Basic_Reading_Skills_PR": null,
+    "Reading_Comprehension_SS": null, "Reading_Comprehension_PR": null,
+    "Reading_Fluency_SS": null,    "Reading_Fluency_PR": null,
+    "Broad_Mathematics_SS": null,  "Broad_Mathematics_PR": null,
+    "Math_Calculation_Skills_SS": null, "Math_Calculation_Skills_PR": null,
+    "Math_Problem_Solving_SS": null, "Math_Problem_Solving_PR": null,
+    "Broad_Written_Language_SS": null, "Broad_Written_Language_PR": null,
+    "Written_Expression_SS": null, "Written_Expression_PR": null,
+    "Broad_Achievement_SS": null,  "Broad_Achievement_PR": null,
+    "Academic_Fluency_SS": null,   "Academic_Fluency_PR": null,
+    "Spelling_SS": null,           "Spelling_PR": null,
+    "Broad_Oral_Language_SS": null, "Broad_Oral_Language_PR": null
+  },
+  "confidence": "high|medium|low",
+  "notes": ""
+}`,
+
+  basc3: `
+Extract T-scores from this BASC-3 (Behavior Assessment System for Children, 3rd Edition) score report.
+Return ONLY valid JSON, no markdown, no explanation.
+T-scores have M=50, SD=10. Extract both Parent (PRS) and Teacher (TRS) if present.
+Use null for any scale not present or not administered.
+
+{
+  "instrument": "BASC-3",
+  "composites": {
+    "Externalizing_Problems_Parent_T": null, "Externalizing_Problems_Teacher_T": null,
+    "Internalizing_Problems_Parent_T": null, "Internalizing_Problems_Teacher_T": null,
+    "School_Problems_Parent_T": null,        "School_Problems_Teacher_T": null,
+    "Behavioral_Symptoms_Index_Parent_T": null, "Behavioral_Symptoms_Index_Teacher_T": null,
+    "Adaptive_Skills_Parent_T": null,        "Adaptive_Skills_Teacher_T": null
+  },
+  "clinical_scales": {
+    "Hyperactivity_Parent_T": null,    "Hyperactivity_Teacher_T": null,
+    "Aggression_Parent_T": null,       "Aggression_Teacher_T": null,
+    "Conduct_Problems_Parent_T": null, "Conduct_Problems_Teacher_T": null,
+    "Anxiety_Parent_T": null,          "Anxiety_Teacher_T": null,
+    "Depression_Parent_T": null,       "Depression_Teacher_T": null,
+    "Somatization_Parent_T": null,     "Somatization_Teacher_T": null,
+    "Atypicality_Parent_T": null,      "Atypicality_Teacher_T": null,
+    "Withdrawal_Parent_T": null,       "Withdrawal_Teacher_T": null,
+    "Attention_Problems_Parent_T": null,"Attention_Problems_Teacher_T": null,
+    "Learning_Problems_Teacher_T": null
+  },
+  "confidence": "high|medium|low",
+  "notes": ""
+}`,
+
+  generic: `
+Extract all psychological test scores from this score report image.
+Return ONLY valid JSON, no markdown, no explanation.
+Identify the instrument name, then extract all composite scores and subtest scores.
+
+{
+  "instrument": "identify from report",
+  "composites": {},
+  "subtests": {},
+  "all_scores": [
+    {
+      "name": "score name as printed",
+      "value": null,
+      "score_type": "SS|ScS|T|PR|RPI|AE|GE",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "confidence": "high|medium|low",
+  "notes": "instrument name, any anomalies"
+}`
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let state = {
+  files: [],
+  selectedInstruments: new Set(),
+  extractedData: [],
+  verifiedCount: 0,
+  totalFields: 0,
+};
+
+// ── Instrument grid ────────────────────────────────────────────────────────
+function renderInstruments() {
+  const grid = document.getElementById('instrument-grid');
+  grid.innerHTML = INSTRUMENTS.map(inst => `
+    <div class="instrument-card" id="inst-${inst.id}"
+         onclick="toggleInstrument('${inst.id}')">
+      <div class="inst-name">${inst.name}</div>
+      <div class="inst-domain">${inst.domain}</div>
+      <div class="inst-desc">${inst.desc}</div>
+    </div>`).join('');
+}
+
+function toggleInstrument(id) {
+  const card = document.getElementById('inst-' + id);
+  if (state.selectedInstruments.has(id)) {
+    state.selectedInstruments.delete(id);
+    card.classList.remove('selected');
+  } else {
+    state.selectedInstruments.add(id);
+    card.classList.add('selected');
+  }
+  updateExtractBtn();
+}
+
+// ── File handling ──────────────────────────────────────────────────────────
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  document.getElementById('upload-zone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+}
+function onFileSelect(e) {
+  addFiles(Array.from(e.target.files));
+}
+
+function addFiles(files) {
+  files.forEach(f => {
+    if (!state.files.find(x => x.name === f.name && x.size === f.size)) {
+      state.files.push({ file: f, status: 'pending', id: Date.now() + Math.random() });
+    }
+  });
+  renderFileQueue();
+  updateExtractBtn();
+}
+
+function renderFileQueue() {
+  const queue = document.getElementById('file-queue');
+  const list  = document.getElementById('file-list');
+  if (state.files.length === 0) { queue.style.display = 'none'; return; }
+  queue.style.display = 'block';
+
+  list.innerHTML = state.files.map((f, i) => `
+    <div class="file-item ${f.status}" id="fi-${i}">
+      <span class="file-icon">${f.file.type.includes('pdf') ? '📄' : '🖼'}</span>
+      <div class="file-info">
+        <div class="file-name">${f.file.name}</div>
+        <div class="file-meta">${(f.file.size / 1024).toFixed(0)} KB · ${f.file.type || 'unknown'}</div>
+      </div>
+      <span class="file-status ${f.status}">${f.status}</span>
+      <span class="file-remove" onclick="removeFile(${i})">✕</span>
+    </div>`).join('');
+}
+
+function removeFile(i) {
+  state.files.splice(i, 1);
+  renderFileQueue();
+  updateExtractBtn();
+}
+
+function updateExtractBtn() {
+  const btn = document.getElementById('extract-btn');
+  btn.disabled = state.files.length === 0 || state.selectedInstruments.size === 0;
+}
+
+// ── PDF → Image conversion ─────────────────────────────────────────────────
+async function pdfToImages(file) {
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const images = [];
+
+  for (let i = 1; i <= Math.min(pdf.numPages, 6); i++) { // cap at 6 pages
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 }); // 1.5x for legibility
+    const canvas = document.createElement('canvas');
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    images.push({ canvas, dataUrl: canvas.toDataURL('image/jpeg', 0.85), page: i });
+  }
+  return images;
+}
+
+async function fileToImage(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize to max 1200px wide for token efficiency
+        const MAX = 1200;
+        const scale = img.width > MAX ? MAX / img.width : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve([{ canvas, dataUrl: canvas.toDataURL('image/jpeg', 0.85), page: 1 }]);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Extraction ─────────────────────────────────────────────────────────────
+async function startExtraction() {
+  // API key check
+  if (!ANTHROPIC_API_KEY) {
+    ANTHROPIC_API_KEY = prompt(
+      'Enter your Anthropic API key for local extraction.\n\n' +
+      'In production, this call routes through your FastAPI backend.\n' +
+      'Your key is stored only in localStorage on this device.'
+    );
+    if (!ANTHROPIC_API_KEY) return;
+    localStorage.setItem('ef_api_key', ANTHROPIC_API_KEY);
+  }
+
+  showStep(2);
+  document.getElementById('panel-upload').style.display = 'none';
+  document.getElementById('panel-processing').classList.add('show');
+
+  const procSteps = [
+    { label: 'Reading file(s)' },
+    { label: 'Converting to images' },
+    { label: 'Sending to extraction API' },
+    { label: 'Parsing extracted scores' },
+    { label: 'Preparing review interface' },
+  ];
+
+  renderProcSteps(procSteps, -1);
+
+  try {
+    // Step 1 & 2: Convert files to images
+    updateProcStep(procSteps, 0);
+    let allImages = [];
+
+    for (let i = 0; i < state.files.length; i++) {
+      const f = state.files[i];
+      updateProcSubtitle(`Processing ${f.file.name}…`);
+      const images = f.file.type.includes('pdf')
+        ? await pdfToImages(f.file)
+        : await fileToImage(f.file);
+      allImages.push(...images);
+      updateFileStatus(i, 'processing');
+    }
+
+    updateProcStep(procSteps, 1);
+    await sleep(300);
+
+    // Step 3: Extract via Claude vision API
+    updateProcStep(procSteps, 2);
+    updateProcSubtitle('Sending to Claude Haiku for extraction…');
+
+    const instruments = Array.from(state.selectedInstruments);
+    const prompt = buildExtractionPrompt(instruments);
+
+    // For multi-page, send the most relevant pages (first 3)
+    const pagesToSend = allImages.slice(0, 3);
+
+    const extracted = await callClaudeVision(pagesToSend, prompt);
+
+    updateFileStatus(0, 'done');
+
+    // Step 4: Parse
+    updateProcStep(procSteps, 3);
+    updateProcSubtitle('Parsing extracted scores…');
+    await sleep(300);
+
+    state.extractedData = parseExtractionResult(extracted, instruments);
+    state.allImages = allImages;
+
+    // Step 5: Render review
+    updateProcStep(procSteps, 4);
+    updateProcSubtitle('Building review interface…');
+    await sleep(300);
+
+    renderReviewPanel(allImages);
+    showStep(3);
+    document.getElementById('panel-processing').classList.remove('show');
+    document.getElementById('panel-review').classList.add('show');
+
+  } catch (err) {
+    document.getElementById('panel-processing').classList.remove('show');
+    document.getElementById('panel-upload').style.display = 'block';
+    showStep(1);
+    alert('Extraction failed: ' + err.message + '\n\nCheck your API key and try again.');
+    console.error(err);
+  }
+}
+
+function buildExtractionPrompt(instrumentIds) {
+  // Build a combined prompt for all selected instruments
+  const schemas = instrumentIds.map(id =>
+    EXTRACTION_PROMPTS[id] || EXTRACTION_PROMPTS.generic
+  );
+
+  return `You are a psychoeducational assessment score extraction system.
+Extract ALL scores visible in this score report image with maximum accuracy.
+
+CRITICAL RULES:
+1. Return ONLY valid JSON — no markdown, no explanation, no preamble
+2. Extract exact numerical values as printed — do not calculate or estimate
+3. Distinguish between scale scores (ScS, typically 1-19), standard scores (SS, M=100 SD=15), T-scores (M=50 SD=10), and percentile ranks (PR)
+4. If a value is not visible or not administered, use null
+5. Include a confidence level ("high", "medium", "low") for each composite score
+6. Flag any values that seem unusual (e.g., SS outside 40-160 range)
+
+This report contains scores from: ${instrumentIds.join(', ')}
+
+Return a JSON object with this structure:
+{
+  "instruments_detected": ["list of instruments you can identify in the image"],
+  "extractions": [
+    ${schemas.join(',\n    ')}
+  ],
+  "overall_confidence": "high|medium|low",
+  "extraction_notes": "any issues, partial visibility, handwriting quality, etc."
+}`;
+}
+
+async function callClaudeVision(images, prompt) {
+  // Build content array with images + prompt
+  const content = [
+    ...images.map(img => ({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: 'image/jpeg',
+        data: img.dataUrl.split(',')[1],
+      }
+    })),
+    { type: 'text', text: prompt }
+  ];
+
+  if (!AUTH_TOKEN) {
+    openAuthModal();
+    throw new Error('Please sign in to use Kairos.');
+  }
+
+  const response = await fetch(BACKEND + '/extract', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + AUTH_TOKEN,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 2000,
+      messages: [{ role: 'user', content }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content[0].text;
+}
+
+function parseExtractionResult(rawText, instrumentIds) {
+  // Strip any accidental markdown fencing
+  const clean = rawText.replace(/```json|```/g, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    // Try to extract JSON from within the text
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
+    throw new Error('Could not parse extraction result as JSON. Raw: ' + clean.slice(0, 200));
+  }
+}
+
+// ── Review panel ───────────────────────────────────────────────────────────
+function renderReviewPanel(images) {
+  // Image preview with page thumbnails
+  const previewPane = document.getElementById('preview-pane');
+  previewPane.innerHTML = '';
+
+  if (images.length > 0) {
+    const thumbsHtml = images.length > 1
+      ? `<div class="page-thumbs" id="page-thumbs">
+          ${images.map((img, i) => `
+          <div class="page-thumb ${i===0?'active':''}" onclick="showPage(${i})" id="thumb-${i}">
+            <canvas id="thumb-canvas-${i}"></canvas>
+            <div class="page-thumb-label">Page ${i+1}</div>
+          </div>`).join('')}
+        </div>`
+      : '';
+
+    previewPane.innerHTML = `
+      <div>
+        ${thumbsHtml}
+        <div class="preview-image-wrap" id="main-preview">
+          <canvas id="main-canvas"></canvas>
+          <div class="preview-label" id="preview-label">Page 1 of ${images.length}</div>
+        </div>
+      </div>`;
+
+    // Draw thumbnails and main preview
+    setTimeout(() => {
+      images.forEach((img, i) => {
+        const tc = document.getElementById('thumb-canvas-' + i);
+        if (tc) {
+          tc.width  = img.canvas.width;
+          tc.height = img.canvas.height;
+          tc.getContext('2d').drawImage(img.canvas, 0, 0);
+        }
+      });
+      showPage(0);
+    }, 50);
+  }
+
+  // Render extracted scores table
+  const tables = document.getElementById('review-tables');
+  const extracted = state.extractedData;
+
+  if (!extracted || !extracted.extractions) {
+    tables.innerHTML = renderGenericTable(extracted);
+  } else {
+    tables.innerHTML = extracted.extractions.map((ext, i) =>
+      renderInstrumentTable(ext, i)
+    ).join('');
+  }
+
+  // Overall confidence badge
+  const overallConf = extracted?.overall_confidence || 'medium';
+  const badge = document.getElementById('confidence-badge');
+  badge.className = `confidence-badge ${overallConf}`;
+  badge.textContent = overallConf.charAt(0).toUpperCase() + overallConf.slice(1) + ' confidence';
+
+  // Extraction notes
+  if (extracted?.extraction_notes) {
+    const noteEl = document.createElement('div');
+    noteEl.style.cssText = 'font-size:11px;color:var(--text-3);padding:8px 12px;background:var(--input-bg);border-radius:var(--radius);margin-bottom:16px;';
+    noteEl.textContent = '📝 ' + extracted.extraction_notes;
+    tables.insertAdjacentElement('afterbegin', noteEl);
+  }
+
+  countVerified();
+}
+
+function showPage(i) {
+  const images = state.allImages;
+  if (!images || !images[i]) return;
+  const mc = document.getElementById('main-canvas');
+  if (mc) {
+    mc.width  = images[i].canvas.width;
+    mc.height = images[i].canvas.height;
+    mc.getContext('2d').drawImage(images[i].canvas, 0, 0);
+  }
+  document.querySelectorAll('.page-thumb').forEach((t,j) => {
+    t.classList.toggle('active', j === i);
+  });
+  const lbl = document.getElementById('preview-label');
+  if (lbl) lbl.textContent = `Page ${i+1} of ${images.length}`;
+}
+
+function renderInstrumentTable(ext, idx) {
+  if (!ext) return '';
+  const instName = ext.instrument || `Instrument ${idx+1}`;
+
+  // Flatten all score fields
+  const rows = [];
+  const addSection = (sectionData, sectionLabel) => {
+    if (!sectionData) return;
+    Object.entries(sectionData).forEach(([key, val]) => {
+      if (typeof val === 'object' && val !== null) return; // skip nested
+      const fieldName = key.replace(/_/g, ' ').replace(/ (SS|PR|T|ScS)$/, '');
+      const scoreType = key.match(/(SS|PR|T|ScS)$/)?.[1] || 'SS';
+      const conf = ext.confidence || 'medium';
+      rows.push({ key, fieldName, val, scoreType, conf, section: sectionLabel });
+    });
+  };
+
+  addSection(ext.composites, 'Composite');
+  addSection(ext.subtests, 'Subtest');
+  addSection(ext.clusters, 'Cluster');
+  addSection(ext.clinical_scales, 'Clinical Scale');
+
+  if (rows.length === 0 && ext.all_scores) {
+    ext.all_scores.forEach((s, i) => {
+      rows.push({
+        key: `score_${i}`, fieldName: s.name,
+        val: s.value, scoreType: s.score_type || 'SS',
+        conf: s.confidence || 'medium', section: 'Score'
+      });
+    });
+  }
+
+  if (rows.length === 0) return `<div style="color:var(--text-3);font-size:12px;padding:12px">No scores extracted for ${instName}.</div>`;
+
+  state.totalFields += rows.length;
+  document.getElementById('total-count').textContent = state.totalFields;
+
+  return `
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">${instName}</div>
+    <table class="extracted-table">
+      <thead>
+        <tr>
+          <th>Score</th>
+          <th>Type</th>
+          <th style="text-align:center">Extracted Value</th>
+          <th style="text-align:center">Confidence</th>
+          <th style="text-align:center">Verified</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(row => {
+          const isFlagged = row.val !== null && (
+            (row.scoreType === 'SS' && (row.val < 40 || row.val > 160)) ||
+            (row.scoreType === 'ScS' && (row.val < 1 || row.val > 19)) ||
+            (row.scoreType === 'T' && (row.val < 20 || row.val > 120))
+          );
+          const confClass = row.conf === 'high' ? 'high' : row.conf === 'low' ? 'low' : 'medium';
+          return `
+          <tr class="extracted-row">
+            <td>
+              <div class="field-name">${row.fieldName}</div>
+              <div class="field-instrument" style="color:var(--text-3);font-size:9px">${row.section}</div>
+              ${isFlagged ? `<div class="flag-note">⚠ Value outside typical range — verify</div>` : ''}
+            </td>
+            <td>
+              <span style="font-family:'DM Mono',monospace;font-size:10px;
+                           color:var(--text-3);background:rgba(255,255,255,0.05);
+                           padding:2px 6px;border-radius:3px">${row.scoreType}</span>
+            </td>
+            <td style="text-align:center">
+              <input type="number"
+                     class="extracted-val ${isFlagged ? 'flagged' : ''}"
+                     id="ev-${row.key}"
+                     value="${row.val !== null ? row.val : ''}"
+                     placeholder="—"
+                     oninput="onValueEdit(this)"/>
+            </td>
+            <td style="text-align:center">
+              <span class="confidence-dot conf-${confClass}"></span>
+            </td>
+            <td style="text-align:center">
+              <label class="verify-check" style="justify-content:center">
+                <input type="checkbox" id="chk-${row.key}"
+                       onchange="onVerifyChange(this)"/>
+              </label>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function renderGenericTable(data) {
+  if (!data) return '<div style="color:var(--red);padding:16px">No data extracted. Check the file and try again.</div>';
+  return `<div class="card">
+    <div class="card-title">Raw Extraction</div>
+    <pre style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-2);
+                white-space:pre-wrap;overflow:auto;max-height:400px">${
+      JSON.stringify(data, null, 2)
+    }</pre>
+  </div>`;
+}
+
+function onValueEdit(input) {
+  // Uncheck verify when value changes — forces re-review
+  const key = input.id.replace('ev-', '');
+  const chk = document.getElementById('chk-' + key);
+  if (chk) chk.checked = false;
+  countVerified();
+}
+
+function onVerifyChange() { countVerified(); }
+
+function countVerified() {
+  const allChk = document.querySelectorAll('[id^="chk-"]');
+  const verified = Array.from(allChk).filter(c => c.checked).length;
+  state.verifiedCount = verified;
+  state.totalFields = allChk.length;
+  document.getElementById('verified-count').textContent = verified;
+  document.getElementById('total-count').textContent = allChk.length;
+  document.getElementById('apply-btn').disabled = verified < allChk.length || allChk.length === 0;
+}
+
+// ── Apply to form ──────────────────────────────────────────────────────────
+// ── Extraction key → Score Entry form field mapping ────────────────────────
+// Maps every possible extraction JSON key to a form field action.
+// action types:
+//   domain_ss:   → document.getElementById('ss-{domain}').value
+//   subtest_ss:  → document.getElementById('ss-equiv-{domain}-{idx}').value
+//                  + document.getElementById('sub-{domain}-{idx}').value (raw)
+//   ach_ss:      → document.getElementById('ach-ss-{achId}').value
+//   ach_pr:      → document.getElementById('ach-pr-{achId}').value
+
+const FIELD_MAP = {
+  // ── TAPS-4 ──
+  'LCI_SS':                         { type: 'domain_ss', domain: 'Gc' },
+  'Auditory_Memory_Index_SS':        { type: 'domain_ss', domain: 'Gsm' },
+  'Processing_Oral_Directions_ScS':  { type: 'subtest_raw', domain: 'Gc',  idx: 0 },
+  'Auditory_Comprehension_ScS':      { type: 'subtest_raw', domain: 'Gc',  idx: 1 },
+  'Number_Memory_Forward_ScS':       { type: 'subtest_raw', domain: 'Gsm', idx: 0 },
+  'Word_Memory_ScS':                 { type: 'subtest_raw', domain: 'Gsm', idx: 1 },
+  'Sentence_Memory_ScS':             { type: 'subtest_raw', domain: 'Gsm', idx: 2 },
+
+  // ── CTOPP-2 ──
+  'Phonological_Awareness_SS':       { type: 'domain_ss', domain: 'Ga' },
+  'Rapid_Symbolic_Naming_SS':        { type: 'domain_ss', domain: 'Glr' },
+  'Phonological_Memory_SS':          { type: 'domain_ss', domain: 'Gsm' },
+  'Elision_ScS':                     { type: 'subtest_raw', domain: 'Ga',  idx: 0 },
+  'Blending_Words_ScS':              { type: 'subtest_raw', domain: 'Ga',  idx: 1 },
+  'Phoneme_Isolation_ScS':           { type: 'subtest_raw', domain: 'Ga',  idx: 2 },
+  'Rapid_Digit_Naming_ScS':          { type: 'subtest_raw', domain: 'Glr', idx: 0 },
+  'Rapid_Letter_Naming_ScS':         { type: 'subtest_raw', domain: 'Glr', idx: 1 },
+
+  // ── TVPS-4 ──
+  'Overall_SS':                      { type: 'domain_ss', domain: 'Gv' },
+  'Visual_Discrimination_ScS':       { type: 'subtest_raw', domain: 'Gv', idx: 0 },
+  'Visual_Memory_ScS':               { type: 'subtest_raw', domain: 'Gv', idx: 1 },
+  'Spatial_Relationships_ScS':       { type: 'subtest_raw', domain: 'Gv', idx: 2 },
+  'Form_Constancy_ScS':              { type: 'subtest_raw', domain: 'Gv', idx: 3 },
+  'Sequential_Memory_ScS':           { type: 'subtest_raw', domain: 'Gv', idx: 4 },
+  'Figure_Ground_ScS':               { type: 'subtest_raw', domain: 'Gv', idx: 5 },
+  'Visual_Closure_ScS':              { type: 'subtest_raw', domain: 'Gv', idx: 6 },
+
+  // ── Beery VMI ──
+  'VMI_SS':                          { type: 'subtest_raw', domain: 'Gv', idx: 7 },
+
+  // ── WJ-IV Cognitive / Gf ──
+  'Number_Matrices_SS':              { type: 'domain_ss',   domain: 'Gf' },
+  'Fluid_Reasoning_SS':              { type: 'domain_ss',   domain: 'Gf' },
+  'FSIQ_SS':                         { type: 'domain_ss',   domain: 'Gf' },  // WISC fallback
+  'General_Ability_Index_SS':        { type: 'domain_ss',   domain: 'Gf' },
+
+  // ── WJ-IV Achievement clusters ──
+  'Broad_Reading_SS':                { type: 'ach_ss', achId: 'broad_reading' },
+  'Broad_Reading_PR':                { type: 'ach_pr', achId: 'broad_reading' },
+  'Basic_Reading_Skills_SS':         { type: 'ach_ss', achId: 'basic_reading' },
+  'Basic_Reading_Skills_PR':         { type: 'ach_pr', achId: 'basic_reading' },
+  'Reading_Comprehension_SS':        { type: 'ach_ss', achId: 'reading_comp' },
+  'Reading_Comprehension_PR':        { type: 'ach_pr', achId: 'reading_comp' },
+  'Reading_Fluency_SS':              { type: 'ach_ss', achId: 'reading_fluency' },
+  'Reading_Fluency_PR':              { type: 'ach_pr', achId: 'reading_fluency' },
+  'Broad_Mathematics_SS':            { type: 'ach_ss', achId: 'broad_math' },
+  'Broad_Mathematics_PR':            { type: 'ach_pr', achId: 'broad_math' },
+  'Math_Calculation_Skills_SS':      { type: 'ach_ss', achId: 'math_calc' },
+  'Math_Calculation_Skills_PR':      { type: 'ach_pr', achId: 'math_calc' },
+  'Math_Problem_Solving_SS':         { type: 'ach_ss', achId: 'math_problem' },
+  'Math_Problem_Solving_PR':         { type: 'ach_pr', achId: 'math_problem' },
+  'Broad_Written_Language_SS':       { type: 'ach_ss', achId: 'broad_written' },
+  'Broad_Written_Language_PR':       { type: 'ach_pr', achId: 'broad_written' },
+  'Written_Expression_SS':           { type: 'ach_ss', achId: 'written_expr' },
+  'Written_Expression_PR':           { type: 'ach_pr', achId: 'written_expr' },
+  'Broad_Achievement_SS':            { type: 'ach_ss', achId: 'broad_achievement' },
+  'Broad_Achievement_PR':            { type: 'ach_pr', achId: 'broad_achievement' },
+  'Academic_Fluency_SS':             { type: 'ach_ss', achId: 'acad_fluency' },
+  'Academic_Fluency_PR':             { type: 'ach_pr', achId: 'acad_fluency' },
+  'Spelling_SS':                     { type: 'ach_ss', achId: 'spelling' },
+  'Spelling_PR':                     { type: 'ach_pr', achId: 'spelling' },
+  'Broad_Oral_Language_SS':          { type: 'ach_ss', achId: 'oral_language' },
+  'Broad_Oral_Language_PR':          { type: 'ach_pr', achId: 'oral_language' },
+
+  // ── BASC-3 — stored as behavioral data, not domain SS ──
+  // These are saved separately in ef_extracted_behavioral
+  // (score entry form behavioral section — future tab)
+};
+
+// ScS → SS conversion
+function scsToSS(scs) {
+  const ss = (scs - 10) * 5 + 100;
+  return (ss >= 40 && ss <= 160) ? ss : null;
+}
+
+function applyToForm() {
+  // Step 1: Collect all verified values from the review table
+  const rawValues = {};
+  document.querySelectorAll('[id^="ev-"]').forEach(input => {
+    const key = input.id.replace('ev-', '');
+    const val = input.value.trim();
+    if (val !== '') rawValues[key] = parseFloat(val);
+  });
+
+  // Step 2: Map keys to form fields using FIELD_MAP
+  const mapped   = {};  // field_id → value (what will actually fill)
+  const unmapped = [];  // keys we couldn't map (for transparency)
+  let filledCount = 0;
+  let behavioralData = {};
+
+  Object.entries(rawValues).forEach(([key, val]) => {
+    if (isNaN(val)) return;
+    const mapping = FIELD_MAP[key];
+
+    if (!mapping) {
+      // Check if it's behavioral (BASC-3, Conners, ASRS)
+      if (key.includes('_T') || key.includes('_Parent') || key.includes('_Teacher')) {
+        behavioralData[key] = val;
+      } else {
+        unmapped.push(key);
+      }
+      return;
+    }
+
+    switch (mapping.type) {
+      case 'domain_ss':
+        mapped[`ss-${mapping.domain}`] = { value: val, type: 'domain_ss', domain: mapping.domain };
+        break;
+      case 'subtest_raw':
+        // Store raw ScS value; score entry form will compute SS equiv
+        mapped[`sub-${mapping.domain}-${mapping.idx}`] = {
+          value: val, type: 'subtest_raw',
+          domain: mapping.domain, idx: mapping.idx,
+          // Pre-compute SS equiv if this is a ScS
+          ssEquiv: (val >= 1 && val <= 19) ? scsToSS(val) : val
+        };
+        break;
+      case 'ach_ss':
+        mapped[`ach-ss-${mapping.achId}`] = { value: val, type: 'ach_ss', achId: mapping.achId };
+        break;
+      case 'ach_pr':
+        mapped[`ach-pr-${mapping.achId}`] = { value: val, type: 'ach_pr', achId: mapping.achId };
+        break;
+    }
+    filledCount++;
+  });
+
+  // Step 3: Build the full payload for localStorage
+  // Score entry form reads this on load and auto-fills with animation
+  const payload = {
+    mapped,
+    unmapped,
+    behavioral: behavioralData,
+    instruments: Array.from(state.selectedInstruments),
+    rawValues,
+    timestamp: new Date().toISOString(),
+    verified: state.verifiedCount,
+    totalExtracted: Object.keys(rawValues).length,
+  };
+
+  localStorage.setItem('ef_extracted_scores', JSON.stringify(payload));
+
+  // Step 4: Show success then redirect
+  showStep(4);
+  document.getElementById('panel-review').classList.remove('show');
+  document.getElementById('panel-success').classList.add('show');
+
+  document.getElementById('filled-summary').innerHTML = `
+    <div class="filled-stat">
+      <div class="num">${filledCount}</div>
+      <div class="lbl">Fields mapped</div>
+    </div>
+    <div class="filled-stat">
+      <div class="num">${state.verifiedCount}</div>
+      <div class="lbl">Verified by you</div>
+    </div>
+    <div class="filled-stat">
+      <div class="num">${Array.from(state.selectedInstruments).length}</div>
+      <div class="lbl">Instruments</div>
+    </div>
+    ${unmapped.length > 0 ? `
+    <div class="filled-stat">
+      <div class="num" style="color:var(--amber)">${unmapped.length}</div>
+      <div class="lbl">Manual entry needed</div>
+    </div>` : ''}`;
+
+  // Auto-redirect after 2.5s with countdown
+  let count = 3;
+  const countEl = document.getElementById('redirect-count');
+  const tick = setInterval(() => {
+    count--;
+    if (countEl) countEl.textContent = count;
+    if (count <= 0) {
+      clearInterval(tick);
+      window.location.href = 'Kairos_ScoreEntry.html';
+    }
+  }, 800);
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function showStep(n) {
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.className = 'step' + (i+1 < n ? ' done' : i+1 === n ? ' active' : '');
+  });
+}
+
+function updateProcSubtitle(text) {
+  document.getElementById('proc-subtitle').textContent = text;
+}
+
+function renderProcSteps(steps, activeIdx) {
+  document.getElementById('proc-steps').innerHTML = steps.map((s, i) => `
+    <div class="progress-step ${i < activeIdx ? 'done' : i === activeIdx ? 'active' : ''}"
+         id="ps-${i}">
+      <div class="step-dot ${i === activeIdx ? 'pulse' : ''}"></div>
+      ${s.label}
+      ${i < activeIdx ? ' ✓' : ''}
+    </div>`).join('');
+}
+
+function updateProcStep(steps, idx) {
+  renderProcSteps(steps, idx);
+}
+
+function updateFileStatus(i, status) {
+  const fi = document.getElementById('fi-' + i);
+  if (!fi) return;
+  fi.className = 'file-item ' + status;
+  const statusEl = fi.querySelector('.file-status');
+  if (statusEl) { statusEl.className = 'file-status ' + status; statusEl.textContent = status; }
+}
+
+function resetToUpload() {
+  state.extractedData = [];
+  state.verifiedCount = 0;
+  state.totalFields = 0;
+  document.getElementById('panel-review').classList.remove('show');
+  document.getElementById('panel-upload').style.display = 'block';
+  document.getElementById('review-tables').innerHTML = '';
+  showStep(1);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Keyboard navigation ────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  // Right arrow: go forward to score entry (if on step 1 upload panel)
+  if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    window.location.href = 'Kairos_ScoreEntry.html';
+  }
+  // Left arrow: no previous page, do nothing
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderInstruments();
+</script>
+
+<!-- Kairos — Angelic Chord + Sparkle Loading Animation -->
+<canvas id="kairos-sparkle-canvas"
+        style="position:fixed;top:0;left:0;width:100%;height:100%;
+               pointer-events:none;z-index:9999;display:none"></canvas>
+
+<script>
+(function() {
+
+  /* ── FREQUENCIES ── */
+  var STRINGS = [
+    { freq: 379.0,  delay:   0, color: '#A78BFA',
+      partials: [[1,.50,2.20],[2,.22,.55],[3.5,.14,.18],[5,.08,.12],[.501,.06,1.40]] },
+    { freq: 318.4,  delay:  55, color: '#818CF8',
+      partials: [[1,.48,2.30],[2,.20,.60],[3.5,.12,.20],[4.8,.07,.14],[.501,.06,1.50]] },
+    { freq: 238.3,  delay: 110, color: '#0E9E8A',
+      partials: [[1,.52,2.40],[2,.22,.65],[3.2,.13,.22],[4.5,.07,.16],[.502,.07,1.60]] },
+    { freq: 142.0,  delay: 165, color: '#C8922A',
+      partials: [[1,.55,2.50],[2,.24,.70],[3,.14,.25],[4.2,.07,.18],[.501,.08,1.80]] },
+    { freq:  94.7,  delay: 220, color: '#D43F66',
+      partials: [[1,.62,2.80],[2,.28,.80],[3,.14,.30],[.5,.09,2.20],[4,.05,.22]] },
+  ];
+
+  var audioCtx = null;
+
+  function getCtx() {
+    if (!audioCtx)
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playString(str, masterGain, ctx, t0) {
+    str.partials.forEach(function(p) {
+      var mult=p[0], gain=p[1], decay=p[2];
+      var osc = ctx.createOscillator();
+      var env = ctx.createGain();
+      osc.type = mult > 2.5 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(str.freq * mult, t0);
+      osc.frequency.exponentialRampToValueAtTime(str.freq * mult * 0.9985, t0 + 0.06);
+      env.gain.setValueAtTime(0.0001, t0);
+      env.gain.linearRampToValueAtTime(gain, t0 + 0.002);
+      env.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+      osc.connect(env); env.connect(masterGain);
+      osc.start(t0); osc.stop(t0 + decay + 0.05);
+    });
+  }
+
+  function playAngelicChord(vol) {
+    vol = vol || 0.82;
+    try {
+      var ctx = getCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+
+      var master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(vol * 0.38, now + 0.30);
+      master.gain.setValueAtTime(vol * 0.38, now + 0.34);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 2.85);
+
+      var dly = ctx.createDelay(0.08);
+      var fb  = ctx.createGain();
+      var wet = ctx.createGain();
+      dly.delayTime.setValueAtTime(0.032, now);
+      fb.gain.setValueAtTime(0.22, now);
+      wet.gain.setValueAtTime(0.16, now);
+      dly.connect(fb); fb.connect(dly); dly.connect(wet);
+      wet.connect(master); master.connect(ctx.destination);
+
+      var dry = ctx.createGain();
+      dry.gain.setValueAtTime(0.86, now);
+      dry.connect(master);
+
+      STRINGS.forEach(function(str) {
+        var t = now + str.delay / 1000;
+        var sg = ctx.createGain();
+        sg.gain.setValueAtTime(1.0, t);
+        sg.connect(dry); sg.connect(dly);
+        playString(str, sg, ctx, t);
+      });
+    } catch(e) { console.warn('Kairos audio:', e); }
+  }
+
+  /* ── SPARKLE CANVAS ── */
+  var canvas = document.getElementById('kairos-sparkle-canvas');
+  var sparks = [];
+  var sparkRAF = null;
+
+  function triggerSparkles() {
+    canvas.style.display = 'block';
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    STRINGS.forEach(function(str, i) {
+      setTimeout(function() {
+        var cnt = [22,18,14,11,10][i];
+        var cx  = window.innerWidth  * 0.5;
+        var cy  = window.innerHeight * 0.42;
+        for (var j = 0; j < cnt; j++) {
+          var a  = Math.random() * Math.PI * 2;
+          var sp = 0.6 + Math.random() * 2.8;
+          var sz = 1.4 + Math.random() * 2.6;
+          sparks.push({
+            x: cx + (Math.random()-0.5)*60,
+            y: cy + (Math.random()-0.5)*40,
+            vx: Math.cos(a)*sp,
+            vy: Math.sin(a)*sp - 0.4 - i*0.12,
+            size: sz, color: str.color, life: 1.0,
+            decay: 0.007 + Math.random()*0.010,
+            tw: Math.random()*Math.PI*2,
+            tws: 4 + Math.random()*9,
+          });
+        }
+      }, str.delay);
+    });
+
+    if (sparkRAF) cancelAnimationFrame(sparkRAF);
+    drawSparkLoop();
+  }
+
+  function drawSparkLoop() {
+    var ctx2 = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (var i = sparks.length-1; i >= 0; i--) {
+      var s = sparks[i];
+      s.x += s.vx; s.y += s.vy; s.vy += 0.014;
+      s.life -= s.decay; s.tw += s.tws * 0.016;
+      if (s.life <= 0) { sparks.splice(i,1); continue; }
+      var twOp = 0.5 + 0.5*Math.sin(s.tw);
+      var op   = s.life * twOp;
+      var sz   = s.size * (0.6 + 0.4*twOp);
+      ctx2.save(); ctx2.globalAlpha = op; ctx2.translate(s.x, s.y);
+      ctx2.beginPath();
+      var OR = sz*2.2, IR = sz*0.7;
+      for (var a2 = 0; a2 < 8; a2++) {
+        var r2  = a2%2===0 ? OR : IR;
+        var ang = (a2/8)*Math.PI*2 - Math.PI/4;
+        if (a2===0) ctx2.moveTo(Math.cos(ang)*r2, Math.sin(ang)*r2);
+        else        ctx2.lineTo(Math.cos(ang)*r2, Math.sin(ang)*r2);
+      }
+      ctx2.closePath(); ctx2.fillStyle = s.color; ctx2.fill();
+      if (op > 0.3) {
+        var g = ctx2.createRadialGradient(0,0,0,0,0,OR*2.8);
+        var hexOp = Math.round(op*50).toString(16).padStart(2,'0');
+        g.addColorStop(0, s.color + hexOp);
+        g.addColorStop(1, s.color + '00');
+        ctx2.beginPath(); ctx2.arc(0,0,OR*2.8,0,Math.PI*2);
+        ctx2.fillStyle = g; ctx2.fill();
+      }
+      ctx2.restore();
+    }
+
+    if (sparks.length > 0) {
+      sparkRAF = requestAnimationFrame(drawSparkLoop);
+    } else {
+      canvas.style.display = 'none';
+    }
+  }
+
+  /* ── PAGE LOAD TRIGGER ── */
+  // Fire on DOMContentLoaded — gives the page a moment to render first
+  function onReady() {
+    // Small delay so the user sees the page before sound+sparkle
+    setTimeout(function() {
+      playAngelicChord(0.78);
+      triggerSparkles();
+    }, 420);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+
+  // Expose for manual replay (e.g. from logo click)
+  window.kairosPlayChord = function() {
+    playAngelicChord(0.82);
+    triggerSparkles();
+  };
+
+})();
+</script>
+
+
+<script>
+// ── Auth & Trial ──────────────────────────────────────────────────────────
+const BACKEND = 'https://web-production-66ab2.up.railway.app';
+let authMode = 'signin';
+
+function openAuthModal() {
+  document.getElementById('auth-modal').classList.add('show');
+}
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.remove('show');
+}
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-signin').classList.toggle('active', mode === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+
+  if (!email || !password) {
+    errEl.textContent = 'Please enter email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const endpoint = authMode === 'signup' ? '/auth/signup' : '/auth/signin';
+    const res = await fetch(BACKEND + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Authentication failed');
+
+    AUTH_TOKEN = data.access_token;
+    localStorage.setItem('kairos_token', AUTH_TOKEN);
+    closeAuthModal();
+    updateAuthUI(data);
+    loadTrialStatus();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function loadTrialStatus() {
+  if (!AUTH_TOKEN) return;
+  try {
+    const res = await fetch(BACKEND + '/trial-status', {
+      headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    updateTrialBadge(data);
+  } catch(e) {}
+}
+
+function updateTrialBadge(data) {
+  const badge = document.getElementById('trial-badge');
+  badge.style.display = 'inline';
+  if (data.is_subscribed) {
+    badge.textContent = '✓ Subscribed';
+    badge.className = 'trial-badge subscribed';
+  } else {
+    const rem = data.remaining ?? 0;
+    badge.textContent = rem + ' analyses left';
+    badge.className = 'trial-badge';
+  }
+}
+
+function updateAuthUI(data) {
+  const btn = document.getElementById('auth-btn');
+  btn.textContent = 'Sign Out';
+  btn.onclick = signOut;
+}
+
+function signOut() {
+  AUTH_TOKEN = '';
+  localStorage.removeItem('kairos_token');
+  document.getElementById('auth-btn').textContent = 'Sign In';
+  document.getElementById('auth-btn').onclick = openAuthModal;
+  document.getElementById('trial-badge').style.display = 'none';
+}
+
+// On load — restore session
+window.addEventListener('DOMContentLoaded', () => {
+  if (AUTH_TOKEN) {
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('auth-btn').onclick = signOut;
+    loadTrialStatus();
+  }
+});
+</script>
+
+</body>
+</html>
