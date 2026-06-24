@@ -1395,6 +1395,8 @@ body::before {
     <div style="font-size:11px;color:var(--teal);font-weight:600;margin-bottom:4px">PSW Pattern</div>
     <div style="font-size:12px;color:var(--text-1)" id="psw-summary">—</div>
   </div>
+  <div id="eligibility-statement" style="display:none;margin-top:12px;padding:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:var(--radius);font-size:12px;color:var(--text-1);line-height:1.6"></div>
+  <div id="dyslexia-profile" style="display:none;margin-top:12px;padding:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius);font-size:12px;color:var(--text-1);line-height:1.6"></div>
 </div>
 
 </div><!-- /app -->
@@ -1817,59 +1819,153 @@ function showValidation(msg) {
 }
 
 // ── Run analysis ───────────────────────────────────────────────────────────
-function runAnalysis() {
+async function runAnalysis() {
   if (!validate()) return;
+
+  if (!AUTH_TOKEN) {
+    openAuthModal();
+    return;
+  }
 
   const btn = document.getElementById('run-btn');
   btn.disabled = true;
   btn.innerHTML = '<span>⟳</span> Running…';
 
-  setTimeout(() => {
+  try {
+    // Build payload from form
+    const payload = {
+      student: {
+        name:     document.getElementById('s-name')?.value || null,
+        dob:      document.getElementById('s-dob')?.value  || null,
+        grade:    document.getElementById('s-grade')?.value || null,
+        school:   document.getElementById('s-school')?.value || null,
+        examiner: document.getElementById('s-examiner')?.value || null,
+      },
+      method:     'AA',
+      hypothesis: 'PSW',
+    };
+
+    // Cognitive domains
+    for (const d of DOMAINS) {
+      const naChecked = document.getElementById('na-' + d.id)?.checked;
+      if (naChecked) continue;
+      const ss = parseFloat(document.getElementById('ss-' + d.id)?.value);
+      const pr = parseFloat(document.getElementById('pr-' + d.id)?.value);
+      if (!isNaN(ss) || !isNaN(pr)) {
+        payload[d.id] = { ss: isNaN(ss) ? null : ss, pr: isNaN(pr) ? null : pr };
+      }
+    }
+
+    // Achievement scores
+    const achievement = {};
+    for (const a of ACADEMIC) {
+      const ss = parseFloat(document.getElementById('ach-ss-' + a.id)?.value);
+      const pr = parseFloat(document.getElementById('ach-pr-' + a.id)?.value);
+      if (!isNaN(ss) || !isNaN(pr)) {
+        achievement[a.id] = { ss: isNaN(ss) ? null : ss, pr: isNaN(pr) ? null : pr };
+      }
+    }
+    if (Object.keys(achievement).length) payload.achievement = achievement;
+
+    const res = await fetch(BACKEND + '/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + AUTH_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (res.status === 402) {
+      alert('Your 3 free analyses have been used.\n\nSubscribe to continue: ' + (data.detail?.checkout_url || ''));
+      return;
+    }
+
+    if (!res.ok) {
+      throw new Error(data.detail?.message || data.detail || 'Analysis failed');
+    }
+
+    showOutputPanel(data.results, data.trial_remaining, data.is_subscribed);
+
+  } catch (e) {
+    alert('Analysis error: ' + e.message);
+  } finally {
     btn.disabled = false;
     btn.innerHTML = '<span>⚡</span> Run Full Analysis';
-    showOutputPanel();
-  }, 1800);
+  }
 }
 
-function showOutputPanel() {
+function showOutputPanel(results, trialRemaining, isSubscribed) {
   const name = document.getElementById('s-name').value || 'Student';
   document.getElementById('output-student-name').textContent = name;
 
-  const ssVals = DOMAINS
-    .filter(d => !document.getElementById('na-' + d.id)?.checked)
-    .map(d => ({ id: d.id, label: d.label, ss: parseInt(document.getElementById('ss-' + d.id)?.value) }))
-    .filter(d => !isNaN(d.ss));
-
-  const mean = ssVals.reduce((a,b)=>a+b.ss,0)/ssVals.length;
-  const weaknesses = ssVals.filter(d => d.ss < 85 && d.ss < mean);
-  const strengths  = ssVals.filter(d => d.ss >= 90 && d.ss >= mean);
-
+  // PSW summary — prefer backend result, fall back to local calculation
   let pswStatus = '';
-  if (strengths.length > 0 && weaknesses.length > 0) {
-    pswStatus = `✓ PSW pattern supported — ${strengths.map(d=>d.label).join(', ')} strength(s); ${weaknesses.map(d=>d.label).join(', ')} weakness(es). Student mean: SS ${mean.toFixed(1)}.`;
-  } else if (weaknesses.length === 0) {
-    pswStatus = 'No PSW cognitive weaknesses identified at this time.';
+  if (results) {
+    pswStatus = results.psw_result || '';
+    if (results.student_mean != null) {
+      pswStatus += ` — Student mean: SS ${parseFloat(results.student_mean).toFixed(1)}.`;
+    }
+    if (results.strengths?.length)   pswStatus += ` Strengths: ${results.strengths.join(', ')}.`;
+    if (results.weaknesses?.length)  pswStatus += ` Weaknesses: ${results.weaknesses.join(', ')}.`;
+    if (results._mock) pswStatus = '[Mock] ' + pswStatus;
   } else {
-    pswStatus = 'PSW pattern partially met — review concordance before eligibility determination.';
+    const ssVals = DOMAINS
+      .filter(d => !document.getElementById('na-' + d.id)?.checked)
+      .map(d => ({ id: d.id, label: d.label, ss: parseInt(document.getElementById('ss-' + d.id)?.value) }))
+      .filter(d => !isNaN(d.ss));
+    const mean = ssVals.reduce((a,b)=>a+b.ss,0)/ssVals.length;
+    const weaknesses = ssVals.filter(d => d.ss < 85 && d.ss < mean);
+    const strengths  = ssVals.filter(d => d.ss >= 90 && d.ss >= mean);
+    if (strengths.length > 0 && weaknesses.length > 0) {
+      pswStatus = `✓ PSW pattern supported — ${strengths.map(d=>d.label).join(', ')} strength(s); ${weaknesses.map(d=>d.label).join(', ')} weakness(es). Student mean: SS ${mean.toFixed(1)}.`;
+    } else if (weaknesses.length === 0) {
+      pswStatus = 'No PSW cognitive weaknesses identified at this time.';
+    } else {
+      pswStatus = 'PSW pattern partially met — review concordance before eligibility determination.';
+    }
   }
-
   document.getElementById('psw-summary').textContent = pswStatus;
 
-  document.getElementById('output-items').innerHTML = [
-    { icon: '📊', name: 'Analysis Excel', desc: 'Domain profile, concordance, effect sizes, PSW checklist', label: 'XLSX' },
-    { icon: '📈', name: 'Figure Package', desc: 'Cognitive, achievement, behavioral, concordance, PSW summary', label: 'PDF' },
-    { icon: '🖥',  name: 'Interactive Dashboard', desc: 'Self-contained HTML for IEP presentations', label: 'HTML' },
-    { icon: '🧠', name: 'Dyslexia Profile', desc: 'IDA alignment, DDH classification, CDE guidance', label: 'PDF' },
-    { icon: '📝', name: 'Report Draft', desc: 'AI-generated narrative sections — review & edit', label: 'DOCX' },
-  ].map(o => `
-    <div class="output-item" onclick="alert('Download: ${o.name}\\n\\nIn v1.0, this will trigger the Python analysis engine and download the file. Backend integration in progress.')">
-      <span class="output-icon">${o.icon}</span>
-      <div class="output-info">
-        <div class="output-name">${o.name}</div>
-        <div class="output-desc">${o.desc}</div>
-      </div>
-      <span class="output-dl">${o.label}</span>
-    </div>`).join('');
+  // Eligibility statement from backend
+  const eligEl = document.getElementById('eligibility-statement');
+  if (eligEl) {
+    eligEl.textContent = results?.eligibility_statement || '';
+    eligEl.style.display = results?.eligibility_statement ? 'block' : 'none';
+  }
+
+  // Dyslexia profile
+  const dyslexiaEl = document.getElementById('dyslexia-profile');
+  if (dyslexiaEl && results?.dyslexia_profile) {
+    const d = results.dyslexia_profile;
+    dyslexiaEl.innerHTML = `
+      <strong>Dyslexia Profile</strong><br>
+      Subtype: ${d.subtype || '—'} &nbsp;|&nbsp;
+      IDA criteria met: ${d.IDA_criteria_met ?? '—'}/7 &nbsp;|&nbsp;
+      Double deficit: ${d.double_deficit ? 'Yes' : 'No'} &nbsp;|&nbsp;
+      Intervention tier: ${d.intervention_tier ?? '—'}
+    `;
+    dyslexiaEl.style.display = 'block';
+  } else if (dyslexiaEl) {
+    dyslexiaEl.style.display = 'none';
+  }
+
+  // Trial badge update
+  if (trialRemaining != null || isSubscribed != null) {
+    const badge = document.getElementById('trial-badge');
+    if (badge) {
+      badge.style.display = 'inline';
+      if (isSubscribed) {
+        badge.textContent = '✓ Subscribed';
+        badge.className = 'trial-badge subscribed';
+      } else {
+        badge.textContent = (trialRemaining ?? 0) + ' analyses left';
+        badge.className = 'trial-badge';
+      }
+    }
+  }
 
   document.getElementById('output-panel').classList.add('show');
 }
